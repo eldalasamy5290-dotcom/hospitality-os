@@ -120,12 +120,15 @@ if (false) {
   });
 } else {
   try {
+    console.log("CLIENT ID:", process.env.MS_CLIENT_ID);
+    console.log("ACCOUNTS:", accounts.length);
+
     result = await pca.acquireTokenByDeviceCode({
       scopes: ["User.Read", "Mail.Read", "Mail.Send", "offline_access"],
-deviceCodeCallback: (response) => {
-  console.log("\n=== DEVICE LOGIN RAW ===");
-  console.log(JSON.stringify(response, null, 2));
-  console.log("=== END DEVICE LOGIN RAW ===\n");
+     deviceCodeCallback: (response) => {
+       console.log("\n=== DEVICE LOGIN RAW ===");
+       console.log(JSON.stringify(response, null, 2));
+       console.log("=== END DEVICE LOGIN RAW ===\n");
 },
     });
   } catch (e) {
