@@ -584,7 +584,7 @@ if (missing.length === 0) {
 });
 
 
-const PORT = Number(process.env.PORT || 3000);
+
 
 app.get("/", (req, res) => {
   res.json({ message: "HospitalityOS backend running 🚀", status: "ok" });
@@ -1199,6 +1199,8 @@ app.post("/actions/:id/approve", async (req, res) => {
 
 });
 
-app.listen(PORT, () => {
+const PORT = Number(process.env.PORT || 3000);
+
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`🔥 HospitalityOS running on port ${PORT}`);
 });
