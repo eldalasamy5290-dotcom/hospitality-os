@@ -35,7 +35,7 @@ const TOKEN_PATH = path.join(__dirname, "../data/token_cache.json");
 const pca = new PublicClientApplication({
   auth: {
     clientId: process.env.MS_CLIENT_ID,
-    authority: "https://login.microsoftonline.com/consumers",
+    authority: "https://login.microsoftonline.com/common",
   },
   cache: {
     cachePlugin: {
@@ -129,6 +129,7 @@ if (false) {
        console.log("\n=== DEVICE LOGIN RAW ===");
        console.log(JSON.stringify(response, null, 2));
        console.log("=== END DEVICE LOGIN RAW ===\n");
+       console.log("CLIENT ID:", process.env.MS_CLIENT_ID);
 },
     });
   } catch (e) {
