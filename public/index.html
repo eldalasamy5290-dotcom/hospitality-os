@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>HospitalityOS</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="logo">H• HospitalityOS</div>
+    <nav>
+      <a class="active">Dashboard</a>
+      <a>Inbox</a>
+      <a>Upcoming</a>
+      <a>Functions</a>
+      <a>Feedback</a>
+    </nav>
+  </aside>
+
+<main class="main">
+
+  <h1>Dashboard</h1>
+
+  <section class="panel">
+    <h2>New Requests</h2>
+    <div id="requests"></div>
+  </section>
+
+  <section class="grid-2">
+    <section class="panel">
+      <h2>Upcoming This Week</h2>
+      <div id="upcoming"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Pending Actions</h2>
+      <div id="actions"></div>
+    </section>
+  </section>
+
+</main>
+
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

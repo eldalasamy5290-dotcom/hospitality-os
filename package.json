@@ -1,0 +1,32 @@
+{
+  "name": "hospitality-os",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+  "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+  "start": "tsx src/server.ts"
+} 
+ "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@azure/msal-node": "^5.0.6",
+    "@supabase/supabase-js": "^2.98.0",
+    "axios": "^1.13.6",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "nodemailer": "^8.0.1",
+    "openai": "^6.25.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.3.3",
+    "ts-node-dev": "^2.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}

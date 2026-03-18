@@ -1,0 +1,161 @@
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #f4f6fb;
+}
+
+.app {
+  display: flex;
+}
+
+.sidebar {
+  width: 220px;
+  background: #0f2747;
+  color: white;
+  padding: 20px;
+}
+
+.logo {
+  font-size: 22px;
+  margin-bottom: 20px;
+}
+
+.sidebar a {
+  display: block;
+  margin: 10px 0;
+  color: #cfe0ff;
+}
+
+.main {
+  flex: 1;
+  padding: 20px;
+}
+
+.panel {
+  background: white;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 10px;
+}
+
+.request {
+  border-bottom: 1px solid #eee;
+  padding: 10px 0;
+}
+
+button {
+  background: #1463ff;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.request-card,
+.action-card {
+  border: 1px solid #e8edf7;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 14px;
+  background: #fff;
+}
+
+.request-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.request-type {
+  font-size: 18px;
+  font-weight: 700;
+  color: #12233d;
+}
+
+.request-customer {
+  font-size: 14px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.request-body {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #243247;
+  margin-bottom: 12px;
+}
+
+.badge {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.badge-draft {
+  background: #eef4ff;
+  color: #1463ff;
+}
+
+.badge-sent {
+  background: #e8f8ef;
+  color: #138a4b;
+}
+
+.menu-box {
+  background: #f6faff;
+  border: 1px solid #d8e9ff;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.menu-title {
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: #0f2747;
+}
+
+.revenue {
+  margin-top: 8px;
+  font-weight: 700;
+  color: #1463ff;
+}
+
+.request-actions {
+  margin-top: 8px;
+}
+
+.approve-btn {
+  background: #1463ff;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.approve-btn:hover {
+  opacity: 0.92;
+}
+
+.upcoming-item {
+  padding: 10px 0;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.action-title {
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #12233d;
+}
