@@ -118,54 +118,55 @@ if (false) {
     scopes: ["User.Read", "Mail.Read", "offline_access"],
   });
 } else {
-try {  
-result = await pca.acquireTokenByDeviceCode({
-   scopes: ["User.Read", "Mail.Read", "Mail.Send", "offline_access"],
-deviceCodeCallback: (response) => {
-  console.log("\n=== DEVICE LOGIN ===");
-  console.log("Go to:", response.verificationUri || response.verification_uri);
-  console.log("Code:", response.userCode || response.user_code);
-  console.log("Message:", response.message || "(no message)");
-  console.log("====================\n");
-},
-  });
-} catch (e) {
-  console.error("FAILED:", e?.message || e);
-  return;
+  try {
+    result = await pca.acquireTokenByDeviceCode({
+      scopes: ["User.Read", "Mail.Read", "Mail.Send", "offline_access"],
+      deviceCodeCallback: (response) => {
+        console.log("\n=== DEVICE LOGIN ===");
+        console.log("Go to:", response.verificationUri || response.verification_uri);
+        console.log("Code:", response.userCode || response.user_code);
+        console.log("Message:", response.message || "(no message)");
+        console.log("====================\n");
+      },
+    });
+  } catch (e) {
+    console.error("FAILED:", e?.message || e);
+    return;
+  }
 }
 
 console.log("Access token acquired ✅");
 
-  const deltaUrl =
-    state.deltaLink ||
-    "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages/delta?$select=id,subject,from,receivedDateTime,conversationId,bodyPreview";
+const deltaUrl =
+  state.deltaLink ||
+  "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages/delta?$select=id,subject,from,receivedDateTime,conversationId,bodyPreview";
 
-  const r = await axios.get(deltaUrl, {
-    headers: { Authorization: `Bearer ${result.accessToken}` },
-  });
-
-  const messages = r.data.value || [];
-  const deltaLink = r.data["@odata.deltaLink"] || r.data["@odata.nextLink"];
-
-  if (deltaLink) {
-    state.deltaLink = deltaLink;
-    saveState(state);
-  }
-
-  let processed = 0;
-
-for (const msg of messages) {
-const fromEmail = msg.from?.emailAddress?.address || "";
-if (!fromEmail) continue; // skip weird/system items
-
-const payload = toIngestPayload(msg);
-
-await axios.post(INGEST_URL, payload, {
-  headers: { "Content-Type": "application/json" },
+const r = await axios.get(deltaUrl, {
+  headers: { Authorization: `Bearer ${result.accessToken}` },
 });
 
-console.log("Ingested email:", msg.subject);
-processed++;
+const messages = r.data.value || [];
+const deltaLink = r.data["@odata.deltaLink"] || r.data["@odata.nextLink"];
+
+if (deltaLink) {
+  state.deltaLink = deltaLink;
+  saveState(state);
+}
+
+let processed = 0;
+
+for (const msg of messages) {
+  const fromEmail = msg.from?.emailAddress?.address || "";
+  if (!fromEmail) continue; // skip weird/system items
+
+  const payload = toIngestPayload(msg);
+
+  await axios.post(INGEST_URL, payload, {
+    headers: { "Content-Type": "application/json" },
+  });
+
+  console.log("Ingested email:", msg.subject);
+  processed++;
 }
 
 console.log(`Processed ${processed} emails.`);
