@@ -97,6 +97,16 @@ function toIngestPayload(msg) {
 }
 
 async function main() {
+
+if (process.env.MS_TOKEN_CACHE) {
+  try {
+    pca.getTokenCache().deserialize(process.env.MS_TOKEN_CACHE);
+    console.log("✅ Token cache loaded");
+  } catch (e) {
+    console.error("❌ Failed to load token cache", e);
+  }
+}
+
 const accounts = await pca.getTokenCache().getAllAccounts();
 
 let result;
