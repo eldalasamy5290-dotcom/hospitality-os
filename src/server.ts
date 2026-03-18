@@ -14,6 +14,7 @@ import path from "path";
 import { functionKnowledgeDemo } from "./ai/functionKnowledge";
 import { eligibleMenus, estimateRevenue, buildFunctionEmailDraft } from "./ai/functionEngine";
 import { sendMailViaGraph } from "./lib/graphMail";
+import { spawn } from "child_process";
 
 const app = express();
 
@@ -1204,3 +1205,19 @@ const PORT = Number(process.env.PORT || 3000);
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🔥 HospitalityOS running on port ${PORT}`);
 });
+
+
+
+if (process.env.NODE_ENV === "production") {
+  console.log("🚀 Starting Outlook poller...");
+
+  const poller = spawn("node", ["src/runOutlookPoll.js"]);
+
+  poller.stdout.on("data", (data) => {
+    console.log(`📩 Poller: ${data}`);
+  });
+
+  poller.stderr.on("data", (data) => {
+    console.error(`❌ Poller Error: ${data}`);
+  });
+}
