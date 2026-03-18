@@ -98,14 +98,15 @@ function toIngestPayload(msg) {
 
 async function main() {
 
-if (process.env.MS_TOKEN_CACHE) {
-  try {
-    pca.getTokenCache().deserialize(process.env.MS_TOKEN_CACHE);
-    console.log("✅ Token cache loaded");
-  } catch (e) {
-    console.error("❌ Failed to load token cache", e);
-  }
-}
+// TEMP: disable token cache while debugging device login
+// if (process.env.MS_TOKEN_CACHE) {
+//   try {
+//     pca.getTokenCache().deserialize(process.env.MS_TOKEN_CACHE);
+//     console.log("✅ Token cache loaded");
+//   } catch (e) {
+//     console.error("❌ Failed to load token cache", e);
+//   }
+// }
 
 const accounts = await pca.getTokenCache().getAllAccounts();
 
@@ -121,13 +122,11 @@ if (false) {
   try {
     result = await pca.acquireTokenByDeviceCode({
       scopes: ["User.Read", "Mail.Read", "Mail.Send", "offline_access"],
-      deviceCodeCallback: (response) => {
-        console.log("\n=== DEVICE LOGIN ===");
-        console.log("Go to:", response.verificationUri || response.verification_uri);
-        console.log("Code:", response.userCode || response.user_code);
-        console.log("Message:", response.message || "(no message)");
-        console.log("====================\n");
-      },
+deviceCodeCallback: (response) => {
+  console.log("\n=== DEVICE LOGIN RAW ===");
+  console.log(JSON.stringify(response, null, 2));
+  console.log("=== END DEVICE LOGIN RAW ===\n");
+},
     });
   } catch (e) {
     console.error("FAILED:", e?.message || e);
