@@ -118,14 +118,20 @@ if (false) {
     scopes: ["User.Read", "Mail.Read", "offline_access"],
   });
 } else {
-  result = await pca.acquireTokenByDeviceCode({
+try {  
+result = await pca.acquireTokenByDeviceCode({
    scopes: ["User.Read", "Mail.Read", "Mail.Send", "offline_access"],
-    deviceCodeCallback: (response) => {
-      console.log("\n=== DEVICE LOGIN ===");
-      console.log(response.message);
-      console.log("====================\n");
-    },
+deviceCodeCallback: (response) => {
+  console.log("\n=== DEVICE LOGIN ===");
+  console.log("Go to:", response.verificationUri || response.verification_uri);
+  console.log("Code:", response.userCode || response.user_code);
+  console.log("Message:", response.message || "(no message)");
+  console.log("====================\n");
+},
   });
+} catch (e) {
+  console.error("FAILED:", e?.message || e);
+  return;
 }
 
 console.log("Access token acquired ✅");
