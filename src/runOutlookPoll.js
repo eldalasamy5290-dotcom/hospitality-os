@@ -111,7 +111,7 @@ const accounts = await pca.getTokenCache().getAllAccounts();
 
 let result;
 
-if (accounts.length > 0) {
+if (false) {
   console.log("Using cached account...");
   result = await pca.acquireTokenSilent({
     account: accounts[0],

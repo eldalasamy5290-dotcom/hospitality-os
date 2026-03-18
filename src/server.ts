@@ -1208,16 +1208,3 @@ app.listen(PORT, "0.0.0.0", () => {
 
 
 
-if (process.env.NODE_ENV === "production") {
-  console.log("🚀 Starting Outlook poller...");
-
-  const poller = spawn("node", ["src/runOutlookPoll.js"]);
-
-  poller.stdout.on("data", (data) => {
-    console.log(`📩 Poller: ${data}`);
-  });
-
-  poller.stderr.on("data", (data) => {
-    console.error(`❌ Poller Error: ${data}`);
-  });
-}
