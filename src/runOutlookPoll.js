@@ -125,11 +125,9 @@ if (false) {
 
     result = await pca.acquireTokenByDeviceCode({
       scopes: ["User.Read", "Mail.Read", "Mail.Send", "offline_access"],
-     deviceCodeCallback: (response) => {
-       console.log("\n=== DEVICE LOGIN RAW ===");
-       console.log(JSON.stringify(response, null, 2));
-       console.log("=== END DEVICE LOGIN RAW ===\n");
-       console.log("CLIENT ID:", process.env.MS_CLIENT_ID);
+deviceCodeCallback: (response) => {
+  console.log("👉 LOGIN QUI:", response.verificationUri);
+  console.log("👉 CODICE:", response.userCode);
 },
     });
   } catch (e) {
