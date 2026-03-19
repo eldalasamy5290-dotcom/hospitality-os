@@ -11,15 +11,26 @@ const INGEST_URL = process.env.INGEST_URL || "http://localhost:3000/ingest/email
 
 // ---- STATE (deltaLink) ----
 const STATE_PATH = path.join(__dirname, "../data/outlook_state.json");
+const STATE_DIR = path.dirname(STATE_PATH);
+
+function ensureStateDir() {
+  if (!fs.existsSync(STATE_DIR)) {
+    fs.mkdirSync(STATE_DIR, { recursive: true });
+  }
+}
 
 function loadState() {
+  ensureStateDir();
+
   if (fs.existsSync(STATE_PATH)) {
     return JSON.parse(fs.readFileSync(STATE_PATH, "utf-8"));
   }
+
   return { deltaLink: null };
 }
 
 function saveState(state) {
+  ensureStateDir();
   fs.writeFileSync(STATE_PATH, JSON.stringify(state, null, 2));
 }
 
