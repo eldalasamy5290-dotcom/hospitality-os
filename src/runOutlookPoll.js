@@ -108,50 +108,59 @@ async function main() {
     return;
   }
 
-  let result;
-  try {
-    result = await pca.acquireTokenSilent({
-      account: accounts[0],
-      scopes: ["User.Read", "Mail.Read", "Mail.Send", "offline_access"],
-    });
-  } catch (e) {
-    console.error("❌ Silent token failed:", e?.message || e);
-    return;
-  }
+let result;
+try {
+  result = await pca.acquireTokenSilent({
+    account: accounts[0],
+    scopes: ["User.Read", "Mail.Read", "Mail.Send", "offline_access"],
+  });
+} catch (e) {
+  console.error("❌ Silent token failed:", e?.message || e);
+  return;
+}
 
-  console.log("Access token acquired ✅");
+console.log("Access token acquired ✅");
 
-  const deltaUrl =
-    state.deltaLink ||
-    "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages/delta?$select=id,subject,from,receivedDateTime,conversationId,bodyPreview";
+// TEMP DEBUG: reset delta state
+state.deltaLink = null;
 
-  const r = await axios.get(deltaUrl, {
-    headers: { Authorization: `Bearer ${result.accessToken}` },
+const deltaUrl =
+  state.deltaLink ||
+  "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages/delta?$select=id,subject,from,receivedDateTime,conversationId,bodyPreview";
+
+const r = await axios.get(deltaUrl, {
+  headers: { Authorization: `Bearer ${result.accessToken}` },
+});
+
+const messages = r.data.value || [];
+console.log("MESSAGES FOUND:", messages.length);
+
+const deltaLink = r.data["@odata.deltaLink"] || r.data["@odata.nextLink"];
+
+if (deltaLink) {
+  state.deltaLink = deltaLink;
+  saveState(state);
+}
+
+let processed = 0;
+
+for (const msg of messages) {
+  console.log("MSG SUBJECT:", msg.subject);
+  console.log("MSG FROM:", msg.from?.emailAddress?.address);
+  console.log("MSG RECEIVED:", msg.receivedDateTime);
+
+  const fromEmail = msg.from?.emailAddress?.address || "";
+  if (!fromEmail) continue;
+
+  const payload = toIngestPayload(msg);
+
+  await axios.post(INGEST_URL, payload, {
+    headers: { "Content-Type": "application/json" },
   });
 
-  const messages = r.data.value || [];
-  const deltaLink = r.data["@odata.deltaLink"] || r.data["@odata.nextLink"];
-
-  if (deltaLink) {
-    state.deltaLink = deltaLink;
-    saveState(state);
-  }
-
-  let processed = 0;
-
-  for (const msg of messages) {
-    const fromEmail = msg.from?.emailAddress?.address || "";
-    if (!fromEmail) continue;
-
-    const payload = toIngestPayload(msg);
-
-    await axios.post(INGEST_URL, payload, {
-      headers: { "Content-Type": "application/json" },
-    });
-
-    console.log("Ingested email:", msg.subject);
-    processed++;
-  }
+  console.log("Ingested email:", msg.subject);
+  processed++;
+}
 
   console.log(`Processed ${processed} emails.`);
 }
