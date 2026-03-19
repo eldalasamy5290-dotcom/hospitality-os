@@ -97,80 +97,73 @@ function toIngestPayload(msg) {
 }
 
 async function main() {
+  if (process.env.MS_TOKEN_CACHE) {
+    try {
+      pca.getTokenCache().deserialize(process.env.MS_TOKEN_CACHE);
+      console.log("✅ Token cache loaded");
+    } catch (e) {
+      console.error("❌ Failed to load token cache", e);
+      return;
+    }
+  }
 
-// TEMP: disable token cache while debugging device login
-// if (process.env.MS_TOKEN_CACHE) {
-//   try {
-//     pca.getTokenCache().deserialize(process.env.MS_TOKEN_CACHE);
-//     console.log("✅ Token cache loaded");
-//   } catch (e) {
-//     console.error("❌ Failed to load token cache", e);
-//   }
-// }
+  const accounts = await pca.getTokenCache().getAllAccounts();
+  console.log("ACCOUNTS FOUND:", accounts.length);
+  if (accounts[0]) {
+    console.log("ACCOUNT USERNAME:", accounts[0].username);
+  }
 
-const accounts = await pca.getTokenCache().getAllAccounts();
-
-let result;
-
-if (false) {
-  console.log("Using cached account...");
-  result = await pca.acquireTokenSilent({
-    account: accounts[0],
-    scopes: ["User.Read", "Mail.Read", "offline_access"],
-  });
-} else {
-  try {
-    console.log("CLIENT ID:", process.env.MS_CLIENT_ID);
-    console.log("ACCOUNTS:", accounts.length);
-
-    result = await pca.acquireTokenByDeviceCode({
-      scopes: ["User.Read", "Mail.Read", "Mail.Send", "offline_access"],
-deviceCodeCallback: (response) => {
-  console.log("👉 LOGIN QUI:", response.verificationUri);
-  console.log("👉 CODICE:", response.userCode);
-},
-    });
-  } catch (e) {
-    console.error("FAILED:", e?.message || e);
+  if (!accounts.length) {
+    console.error("❌ No cached account found");
     return;
   }
-}
 
-console.log("Access token acquired ✅");
+  let result;
+  try {
+    result = await pca.acquireTokenSilent({
+      account: accounts[0],
+      scopes: ["User.Read", "Mail.Read", "Mail.Send", "offline_access"],
+    });
+  } catch (e) {
+    console.error("❌ Silent token failed:", e?.message || e);
+    return;
+  }
 
-const deltaUrl =
-  state.deltaLink ||
-  "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages/delta?$select=id,subject,from,receivedDateTime,conversationId,bodyPreview";
+  console.log("Access token acquired ✅");
 
-const r = await axios.get(deltaUrl, {
-  headers: { Authorization: `Bearer ${result.accessToken}` },
-});
+  const deltaUrl =
+    state.deltaLink ||
+    "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages/delta?$select=id,subject,from,receivedDateTime,conversationId,bodyPreview";
 
-const messages = r.data.value || [];
-const deltaLink = r.data["@odata.deltaLink"] || r.data["@odata.nextLink"];
-
-if (deltaLink) {
-  state.deltaLink = deltaLink;
-  saveState(state);
-}
-
-let processed = 0;
-
-for (const msg of messages) {
-  const fromEmail = msg.from?.emailAddress?.address || "";
-  if (!fromEmail) continue; // skip weird/system items
-
-  const payload = toIngestPayload(msg);
-
-  await axios.post(INGEST_URL, payload, {
-    headers: { "Content-Type": "application/json" },
+  const r = await axios.get(deltaUrl, {
+    headers: { Authorization: `Bearer ${result.accessToken}` },
   });
 
-  console.log("Ingested email:", msg.subject);
-  processed++;
-}
+  const messages = r.data.value || [];
+  const deltaLink = r.data["@odata.deltaLink"] || r.data["@odata.nextLink"];
 
-console.log(`Processed ${processed} emails.`);
+  if (deltaLink) {
+    state.deltaLink = deltaLink;
+    saveState(state);
+  }
+
+  let processed = 0;
+
+  for (const msg of messages) {
+    const fromEmail = msg.from?.emailAddress?.address || "";
+    if (!fromEmail) continue;
+
+    const payload = toIngestPayload(msg);
+
+    await axios.post(INGEST_URL, payload, {
+      headers: { "Content-Type": "application/json" },
+    });
+
+    console.log("Ingested email:", msg.subject);
+    processed++;
+  }
+
+  console.log(`Processed ${processed} emails.`);
 }
 
 main().catch((e) => {
