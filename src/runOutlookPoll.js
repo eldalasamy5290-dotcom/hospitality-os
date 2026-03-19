@@ -165,7 +165,19 @@ for (const msg of messages) {
   console.log(`Processed ${processed} emails.`);
 }
 
-main().catch((e) => {
-  console.error("FAILED:", e?.response?.data || e?.message || e);
-  process.exit(1);
-});
+async function runLoop() {
+  while (true) {
+    try {
+      console.log("---- RUN START ----");
+      await main();
+      console.log("---- RUN END ----");
+    } catch (e) {
+      console.error("LOOP ERROR:", e?.message || e);
+    }
+
+    // aspetta 10 secondi
+    await new Promise((r) => setTimeout(r, 10000));
+  }
+}
+
+runLoop();
