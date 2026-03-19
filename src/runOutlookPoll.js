@@ -30,31 +30,10 @@ if (!RESTAURANT_ID) {
   process.exit(1);
 }
 
-const TOKEN_PATH = path.join(__dirname, "../data/token_cache.json");
-
 const pca = new PublicClientApplication({
   auth: {
     clientId: process.env.MS_CLIENT_ID,
     authority: "https://login.microsoftonline.com/common",
-  },
-  cache: {
-    cachePlugin: {
-      beforeCacheAccess: async (cacheContext) => {
-        if (fs.existsSync(TOKEN_PATH)) {
-          cacheContext.tokenCache.deserialize(
-            fs.readFileSync(TOKEN_PATH, "utf-8")
-          );
-        }
-      },
-      afterCacheAccess: async (cacheContext) => {
-        if (cacheContext.cacheHasChanged) {
-          fs.writeFileSync(
-            TOKEN_PATH,
-            cacheContext.tokenCache.serialize()
-          );
-        }
-      },
-    },
   },
 });
 
