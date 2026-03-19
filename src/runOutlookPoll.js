@@ -122,7 +122,6 @@ try {
 console.log("Access token acquired ✅");
 
 // TEMP DEBUG: reset delta state
-state.deltaLink = null;
 
 const deltaUrl =
   state.deltaLink ||
