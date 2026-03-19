@@ -1,5 +1,7 @@
 const restaurantId = "88727ef0-d7a7-4ae7-9d01-d8f30e820528";
 
+let isLoading = false;
+
 async function loadRequests() {
   const draftsRes = await fetch(`/drafts?restaurant_id=${restaurantId}`);
   const actionsRes = await fetch(`/actions?restaurant_id=${restaurantId}`);
@@ -112,6 +114,9 @@ async function approve(id) {
 
   alert("Reply sent successfully");
   loadRequests();
+setInterval(() => {
+  loadRequests();
+}, 5000);
 }
 
 loadRequests();
