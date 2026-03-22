@@ -1011,18 +1011,18 @@ app.post("/drafts/:id/approve", async (req, res) => {
       subject: draft.subject,
     });
 
-    console.log("🚫 SKIPPING EMAIL SEND FOR TEST", {
-  id,
+   await sendMailViaGraph({
   to: draft.to_email,
-  subject: draft.subject,
+  subject: draft.subject ?? "(no subject)",
+  text: draft.body,
 });
 
-console.log("EMAIL SENT (TEST MODE)", { id });
+console.log("EMAIL SENT", { id });
 
     const { data: updated, error: updErr } = await supabase
       .from("draft_replies")
       .update({
-        status: "sent",
+        status: "approved",
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
