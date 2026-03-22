@@ -18,7 +18,7 @@ import { spawn } from "child_process";
 
 const app = express();
 
-app.use(express.static(path.join(__dirname, "..", "public")));
+app.use(express.static(path.join(process.cwd(), "public")));
 
 app.get("/demo", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "public", "index.html"));
@@ -413,7 +413,7 @@ if (bookingInboxErr) {
   }
 
 
-// -------- DEMO: create draft reply --------
+// -------- DEMO: create/update draft reply --------
 let replyBody = "";
 
 if (missing.length === 0) {
@@ -438,12 +438,33 @@ Please reply with the missing information.
 Best regards`;
 }
 
+// RULE:
+// Use booking_id as primary key for draft lookup.
+// Only fallback to thread_id if no draft exists for that booking.
+// message_id is the idempotency key for the email event.
 
-const threadIdForDraft = p.thread_id ?? null;
+const threadIdForDraft = p.thread_id ?? emailEvent?.thread_id ?? null;
+const messageIdForDraft = emailEvent?.message_id ?? null;
 
 let existingDraft: any = null;
 
-if (threadIdForDraft) {
+// 1) Primary lookup by booking_id
+const { data: bookingDraftRows, error: bookingDraftErr } = await supabase
+  .from("draft_replies")
+  .select("*")
+  .eq("restaurant_id", p.restaurant_id)
+  .eq("booking_id", booking.id)
+  .eq("status", "draft")
+  .limit(1);
+
+if (bookingDraftErr) {
+  return res.status(500).json({ ok: false, error: bookingDraftErr.message });
+}
+
+existingDraft = bookingDraftRows?.[0] ?? null;
+
+// 2) Fallback lookup by thread_id only if no booking draft found
+if (!existingDraft && threadIdForDraft) {
   const { data: draftRows, error: searchDraftErr } = await supabase
     .from("draft_replies")
     .select("*")
@@ -463,10 +484,12 @@ if (existingDraft) {
   const { error: updateDraftErr } = await supabase
     .from("draft_replies")
     .update({
+      booking_id: booking.id,
       to_email: p.customer_email,
       subject: "Re: booking request",
       body: replyBody,
-      message_id: emailEvent?.message_id ?? existingDraft.message_id ?? null,
+      thread_id: threadIdForDraft ?? existingDraft.thread_id ?? null,
+      message_id: messageIdForDraft ?? existingDraft.message_id ?? null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", existingDraft.id);
@@ -475,58 +498,28 @@ if (existingDraft) {
     return res.status(500).json({ ok: false, error: updateDraftErr.message });
   }
 } else {
-  const { error: insertDraftErr } = await supabase
+  const { error: upsertDraftErr } = await supabase
     .from("draft_replies")
-    .insert([
+    .upsert(
+      [
+        {
+          restaurant_id: p.restaurant_id,
+          booking_id: booking.id,
+          thread_id: threadIdForDraft,
+          message_id: messageIdForDraft,
+          to_email: p.customer_email,
+          subject: "Re: booking request",
+          body: replyBody,
+          status: "draft",
+        },
+      ],
       {
-        restaurant_id: p.restaurant_id,
-        thread_id: threadIdForDraft,
-        message_id: emailEvent?.message_id ?? null,
-        to_email: p.customer_email,
-        subject: "Re: booking request",
-        body: replyBody,
-        status: "draft",
-      },
-    ]);
+        onConflict: "restaurant_id,message_id",
+      }
+    );
 
-  if (insertDraftErr) {
-    return res.status(500).json({ ok: false, error: insertDraftErr.message });
-  }
-}
-
-  
-if (existingDraft) {
-  const { error: updateDraftErr } = await supabase
-    .from("draft_replies")
-    .update({
-      to_email: p.customer_email,
-      subject: "Re: booking request",
-      body: replyBody,
-      message_id: emailEvent?.message_id ?? existingDraft.message_id ?? null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", existingDraft.id);
-
-  if (updateDraftErr) {
-    return res.status(500).json({ ok: false, error: updateDraftErr.message });
-  }
-} else {
-  const { error: insertDraftErr } = await supabase
-    .from("draft_replies")
-    .insert([
-      {
-        restaurant_id: p.restaurant_id,
-        booking_id: booking.id,
-        to_email: p.customer_email,
-        subject: "Re: booking request",
-        body: replyBody,
-        status: "draft",
-        message_id: emailEvent?.message_id ?? null,
-      },
-    ]);
-
-  if (insertDraftErr) {
-    return res.status(500).json({ ok: false, error: insertDraftErr.message });
+  if (upsertDraftErr) {
+    return res.status(500).json({ ok: false, error: upsertDraftErr.message });
   }
 }
 
@@ -832,163 +825,7 @@ for (const row of drafts.data ?? []) {
   });
 });
 
-app.get("/dashboard/view", (req, res) => {
-  const restaurant_id = String(req.query.restaurant_id ?? "");
-  if (!restaurant_id) {
-    res.status(400).send("restaurant_id required");
-    return;
-  }
 
-  const html = `
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>HospitalityOS Dashboard</title>
-  <style>
-    body{font-family:Arial,Helvetica,sans-serif;padding:24px;background:#f6f7fb;color:#111}
-    h1{margin:0 0 6px 0;font-size:28px}
-    .sub{color:#666;margin:0 0 20px 0;font-size:13px}
-    .grid{display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:12px;max-width:1000px}
-    .card,.item{background:#fff;border:1px solid #e8e8ef;border-radius:16px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,0.04)}
-    .k{font-size:12px;color:#666}
-    .v{font-size:30px;margin-top:8px;font-weight:700}
-    .section{margin-top:24px;max-width:1000px}
-    .timeline{display:flex;flex-direction:column;gap:10px}
-    .item-top{display:flex;justify-content:space-between;gap:12px;align-items:center}
-    .label{font-weight:600}
-    .ts{font-size:12px;color:#666;white-space:nowrap}
-    .meta{margin-top:8px;font-size:13px;color:#444;line-height:1.5}
-    .row{display:flex;gap:10px;margin-top:18px;align-items:center}
-    button{border:1px solid #ddd;background:#fff;border-radius:10px;padding:10px 12px;cursor:pointer}
-    pre{white-space:pre-wrap;word-break:break-word}
-  </style>
-</head>
-<body>
-  <h1>HospitalityOS</h1>
-  <p class="sub" id="meta">Loading dashboard...</p>
-
-  <div class="grid" id="cards"></div>
-
-  <div class="row">
-    <button onclick="loadAll()">Refresh</button>
-    <span>Restaurant: ${restaurant_id}</span>
-  </div>
-
-  <div class="section">
-    <h3>Recent Activity</h3>
-    <div class="timeline" id="timeline"></div>
-  </div>
-
-<script>
-const rid = ${JSON.stringify(restaurant_id)};
-
-async function approveDraft(id) {
-  const res = await fetch('/drafts/' + id + '/approve', { method: 'POST' });
-  const json = await res.json();
-
-  if (!json.ok) {
-    alert('Error: ' + (json.error || 'unknown'));
-    return;
-  }
-
-  alert('Reply sent');
-  loadAll();
-}
-
-function renderMetrics(j) {
-  const meta = document.getElementById('meta');
-  const cards = document.getElementById('cards');
-
-  if (!j.ok) {
-    meta.textContent = 'Error loading metrics: ' + (j.error || 'unknown');
-    cards.innerHTML = '';
-    return;
-  }
-
-  meta.textContent = 'Operational demo view';
-  const m = j.metrics || {};
-  const items = [
-    ['Emails processed', m.emails_processed ?? 0],
-    ['Bookings created', m.bookings_created ?? 0],
-    ['Function leads', m.function_leads ?? 0],
-    ['Estimated revenue', '$' + (m.estimated_revenue ?? 0)],
-    ['Drafts pending', m.drafts_pending ?? 0],
-    ['Actions pending', m.actions_pending ?? 0]
-  ];
-
-  cards.innerHTML = items.map(function(item) {
-    return '<div class="card"><div class="k">' + item[0] + '</div><div class="v">' + item[1] + '</div></div>';
-  }).join('');
-}
-
-function renderTimeline(j) {
-  const timeline = document.getElementById('timeline');
-
-  if (!j.ok) {
-    timeline.innerHTML = '<div class="item">Error loading timeline: ' + (j.error || 'unknown') + '</div>';
-    return;
-  }
-
-  const rows = j.data || [];
-  if (!rows.length) {
-    timeline.innerHTML = '<div class="item">No activity yet</div>';
-    return;
-  }
-
-  timeline.innerHTML = rows.map(function(row) {
-    const meta = row.meta ? JSON.stringify(row.meta, null, 2) : '{}';
-    let buttonHtml = '';
-
-    if (row.kind === 'draft_reply' && row.meta && row.meta.id && row.meta.status === 'draft') {
-      buttonHtml = '<button data-draft-id="' + row.meta.id + '" class="send-reply-btn">Send reply</button>';
-    }
-
-    return '' +
-      '<div class="item">' +
-        '<div class="item-top">' +
-          '<div class="label">' + row.label + '</div>' +
-          '<div class="ts">' + row.ts + '</div>' +
-        '</div>' +
-        '<div class="meta"><strong>Type:</strong> ' + row.kind + '</div>' +
-        '<div class="meta">' + buttonHtml + '</div>' +
-        '<div class="meta"><pre>' + meta + '</pre></div>' +
-      '</div>';
-  }).join('');
-
-  document.querySelectorAll('.send-reply-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      const id = btn.getAttribute('data-draft-id');
-      if (id) approveDraft(id);
-    });
-  });
-}
-
-async function loadAll() {
-  try {
-    const metricsRes = await fetch('/dashboard?restaurant_id=' + encodeURIComponent(rid));
-    const timelineRes = await fetch('/dashboard/timeline?restaurant_id=' + encodeURIComponent(rid) + '&limit=10');
-
-    const metricsJson = await metricsRes.json();
-    const timelineJson = await timelineRes.json();
-
-    renderMetrics(metricsJson);
-    renderTimeline(timelineJson);
-  } catch (e) {
-    document.getElementById('meta').textContent = 'Load failed: ' + String(e);
-  }
-}
-
-loadAll();
-</script>
-</body>
-</html>
-`;
-
-  res.setHeader("Content-Type", "text/html");
-  res.send(html);
-});
 
 const CreateRestaurantSchema = z.object({
   name: z.string().min(2),
@@ -1140,51 +977,97 @@ app.get("/actions", async (req, res) => {
   res.json({ ok: true, data });
 });
 
+
+app.use(express.static(path.join(process.cwd(), "public")));
+
 // approve draft reply
 app.post("/drafts/:id/approve", async (req, res) => {
   const id = req.params.id;
 
-  // 1) load draft
+  console.log("=== APPROVE ROUTE HIT ===", { id });
+
   const { data: draft, error: readErr } = await supabase
     .from("draft_replies")
     .select("*")
     .eq("id", id)
     .single();
 
-  if (readErr) return res.status(500).json({ ok: false, error: readErr.message });
+  console.log("DRAFT LOAD RESULT", {
+    id,
+    hasDraft: !!draft,
+    readErr: readErr?.message || null,
+  });
 
-  // 2) send email
+  if (readErr || !draft) {
+    return res
+      .status(500)
+      .json({ ok: false, error: readErr?.message || "Draft not found" });
+  }
+
   try {
-await sendMailViaGraph({
+    console.log("APPROVE START", {
+      id,
+      to: draft.to_email,
+      subject: draft.subject,
+    });
+
+    console.log("🚫 SKIPPING EMAIL SEND FOR TEST", {
+  id,
   to: draft.to_email,
-  subject: draft.subject ?? "(no subject)",
-  text: draft.body,
+  subject: draft.subject,
 });
 
- // 3) mark as sent
-const { data: updated, error: updErr } = await supabase
-  .from("draft_replies")
-  .update({ status: "sent", updated_at: new Date().toISOString() })
-  .eq("id", id)
-  .select("*")
-  .single();
+console.log("EMAIL SENT (TEST MODE)", { id });
 
-if (updErr) return res.status(500).json({ ok: false, error: updErr.message });
+    const { data: updated, error: updErr } = await supabase
+      .from("draft_replies")
+      .update({
+        status: "sent",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select("*")
+      .single();
+
+    console.log("UPDATE RESULT", {
+      id,
+      updated: !!updated,
+      updErr: updErr?.message || null,
+    });
+
+    if (updErr) {
+      return res.status(500).json({ ok: false, error: updErr.message });
+    }
+
+    console.log("GRAPH SEND OK", { id });
 
     return res.json({ ok: true, sent: true, draft: updated });
   } catch (e: any) {
-    await supabase
-      .from("draft_replies")
-      .update({ status: "failed", updated_at: new Date().toISOString() })
-      .eq("id", id);
+  const message = e?.message ?? String(e);
 
-    return res.status(500).json({ ok: false, error: e?.message ?? String(e) });
-  }
+  console.error("APPROVE FAILED", {
+    id,
+    message,
+    stack: e?.stack ?? null,
+  });
+
+  await supabase
+    .from("draft_replies")
+    .update({
+      status: "failed",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  return res.status(500).json({
+    ok: false,
+    error: message,
+  });
+}
 });
 
 // approve action
 app.post("/actions/:id/approve", async (req, res) => {
-
   const id = req.params.id;
 
   const { data, error } = await supabase
@@ -1197,7 +1080,6 @@ app.post("/actions/:id/approve", async (req, res) => {
   if (error) return res.status(500).json({ ok: false, error: error.message });
 
   res.json({ ok: true, action: data });
-
 });
 
 const PORT = Number(process.env.PORT || 3000);
@@ -1205,6 +1087,3 @@ const PORT = Number(process.env.PORT || 3000);
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🔥 HospitalityOS running on port ${PORT}`);
 });
-
-
-

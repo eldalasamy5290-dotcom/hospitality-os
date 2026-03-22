@@ -97,31 +97,47 @@ async function main() {
     }
   }
 
-  const accounts = await pca.getTokenCache().getAllAccounts();
+const accounts = await pca.getTokenCache().getAllAccounts();
   console.log("ACCOUNTS FOUND:", accounts.length);
   if (accounts[0]) {
     console.log("ACCOUNT USERNAME:", accounts[0].username);
   }
 
-  if (!accounts.length) {
-    console.error("❌ No cached account found");
+let result;
+
+if (!accounts.length) {
+  console.log("No account found → starting device login...");
+
+  try {
+    result = await pca.acquireTokenByDeviceCode({
+      scopes: ["User.Read", "Mail.Read", "Mail.Send", "offline_access"],
+      deviceCodeCallback: (response) => {
+        console.log("\n=== DEVICE LOGIN ===");
+        console.log(response.message);
+        console.log("====================\n");
+      },
+    });
+  } catch (e) {
+    console.error("❌ Device login failed:", e?.message || e);
     return;
   }
-
-let result;
-try {
-  result = await pca.acquireTokenSilent({
-    account: accounts[0],
-    scopes: ["User.Read", "Mail.Read", "Mail.Send", "offline_access"],
-  });
-} catch (e) {
-  console.error("❌ Silent token failed:", e?.message || e);
-  return;
+} else {
+  try {
+    result = await pca.acquireTokenSilent({
+      account: accounts[0],
+      scopes: ["User.Read", "Mail.Read", "Mail.Send", "offline_access"],
+    });
+  } catch (e) {
+    console.error("❌ Silent token failed:", e?.message || e);
+    return;
+  }
 }
 
 console.log("Access token acquired ✅");
 
 // TEMP DEBUG: reset delta state
+
+const isFirstRun = !state.deltaLink;
 
 const deltaUrl =
   state.deltaLink ||
@@ -141,6 +157,11 @@ if (deltaLink) {
   saveState(state);
 }
 
+if (isFirstRun) {
+  console.log("Initial delta state saved. Skipping old emails.");
+  return;
+}
+
 let processed = 0;
 
 for (const msg of messages) {
@@ -150,6 +171,12 @@ for (const msg of messages) {
 
   const fromEmail = msg.from?.emailAddress?.address || "";
   if (!fromEmail) continue;
+
+  if (!fromEmail) continue;
+
+  if (fromEmail.includes("accountprotection.microsoft.com")) continue;
+
+  if (!looksLikeBooking(msg)) continue;
 
   const payload = toIngestPayload(msg);
 

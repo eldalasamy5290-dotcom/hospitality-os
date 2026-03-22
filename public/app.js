@@ -2,6 +2,8 @@ const restaurantId = "88727ef0-d7a7-4ae7-9d01-d8f30e820528";
 
 let isLoading = false;
 
+console.log("APP JS LOADED 🔥");
+
 async function loadRequests() {
   const draftsRes = await fetch(`/drafts?restaurant_id=${restaurantId}`);
   const actionsRes = await fetch(`/actions?restaurant_id=${restaurantId}`);
@@ -104,19 +106,73 @@ function renderActionCard(action) {
 }
 
 async function approve(id) {
-  const res = await fetch(`/drafts/${id}/approve`, { method: "POST" });
-  const json = await res.json();
+  try {
+    console.log("approve click", id);
 
-  if (!json.ok) {
-    alert("Send failed: " + (json.error || "Unknown error"));
-    return;
+    const res = await fetch(`/drafts/${id}/approve`, { method: "POST" });
+    const json = await res.json();
+
+    console.log("approve response", json);
+
+    if (!json.ok) {
+      alert("Send failed: " + (json.error || "Unknown error"));
+      return;
+    }
+
+    alert("Reply sent successfully");
+    await loadRequests();
+  } catch (err) {
+    console.error("approve error", err);
+    alert("Network/server error");
   }
-
-  alert("Reply sent successfully");
-  loadRequests();
-setInterval(() => {
-  loadRequests();
-}, 5000);
 }
 
 loadRequests();
+
+async function approveDraft(id) {
+  console.log("approveDraft click", id);
+
+  try {
+    const res = await fetch(`/drafts/${id}/approve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const json = await res.json();
+    console.log("approveDraft response", json);
+
+    if (!json.ok) {
+      alert("Approve draft failed: " + (json.error || "Unknown error"));
+      return;
+    }
+
+    await loadRequests();
+  } catch (err) {
+    console.error("approveDraft error", err);
+    alert("Network/server error on approve draft");
+  }
+}
+
+async function approveAction(id) {
+  console.log("approveAction click", id);
+
+  try {
+    const res = await fetch(`/actions/${id}/approve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const json = await res.json();
+    console.log("approveAction response", json);
+
+    if (!json.ok) {
+      alert("Approve action failed: " + (json.error || "Unknown error"));
+      return;
+    }
+
+    await loadRequests();
+  } catch (err) {
+    console.error("approveAction error", err);
+    alert("Network/server error on approve action");
+  }
+}
