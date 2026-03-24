@@ -89,22 +89,48 @@ const IngestEmailSchema = z.object({
 }).passthrough();
 
 app.post("/ingest/email", async (req, res) => {
-  const parsed = IngestEmailSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ ok: false, error: parsed.error.flatten() });
+  console.log("=== INGEST EMAIL HIT ===");
+  console.log("INGEST RAW BODY:", JSON.stringify(req.body, null, 2));
 
-  const p = parsed.data;
+  const parsed = IngestEmailSchema.safeParse(req.body);
+  if (!parsed.success) {
+    console.error("INGEST VALIDATION FAILED:", JSON.stringify(parsed.error.flatten(), null, 2));
+    return res.status(400).json({ ok: false, error: parsed.error.flatten() });
+  }
+
+    const p = parsed.data;
+
+  try {
 
 // 1) AI processing
 const now_perth_iso = new Date().toISOString();
+
+    console.log("INGEST VALIDATION OK", {
+      restaurant_id: p.restaurant_id,
+      customer_email: p.customer_email,
+      thread_id: p.thread_id,
+      message_preview: p.message_text?.slice(0, 120) || null,
+    });
 
 const result = await processIncomingEmail({
   now_perth_iso,
   message_text: p.message_text,
 });
 
+    console.log("INGEST RESULT TYPE:", result.type);
+    console.log("PROCESS INCOMING EMAIL RESULT:", JSON.stringify(result, null, 2));
+    console.log("PROCESS INCOMING EMAIL RESULT:", JSON.stringify(result, null, 2));
+
 // if function → save inbox_event + create function draft (+ revenue) + stop
 if (result.type === "function") {
   const emailEvent = (p as any).email_event ?? null;
+
+    console.log("FUNCTION BRANCH HIT", {
+      confidence: result.confidence,
+      people: (result as any)?.function_data?.people ?? null,
+      date_hint: (result as any)?.function_data?.date_hint ?? null,
+      occasion: (result as any)?.function_data?.occasion ?? null,
+    });
 
   // 1) Save inbox_event (log)
   const { data: savedEvent, error: evErr } = await supabase
@@ -127,7 +153,10 @@ if (result.type === "function") {
     .select("id,thread_id,created_at")
     .single();
 
-  if (evErr) return res.status(500).json({ ok: false, error: evErr.message });
+  if (evErr) {
+  console.error("INBOX_EVENTS INSERT ERROR:", evErr.message);
+  return res.status(500).json({ ok: false, error: evErr.message });
+}
 
   // 2) Create function proposal draft (+ revenue estimate)
   const restaurantName = "Bungalow"; // demo
@@ -514,7 +543,7 @@ if (existingDraft) {
         },
       ],
       {
-        onConflict: "restaurant_id,message_id",
+        onConflict: "booking_id",
       }
     );
 
@@ -575,6 +604,17 @@ if (missing.length === 0) {
 }
 
   return res.status(201).json({ ok: true, extracted, booking });
+
+  } catch (e: any) {
+    console.error("INGEST ERROR MESSAGE:", e?.message || String(e));
+    console.error("INGEST ERROR STACK:", e?.stack || null);
+    console.error("INGEST ERROR BODY:", JSON.stringify(req.body, null, 2));
+
+    return res.status(500).json({
+      ok: false,
+      error: e?.message || String(e),
+    });
+  }
 });
 
 

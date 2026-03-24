@@ -5,6 +5,8 @@ const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
 
+console.log("RUNOUTLOOKPOLL DEBUG V2 LOADED");
+
 // ---- CONFIG ----
 const RESTAURANT_ID = process.env.RESTAURANT_ID; // UUID del ristorante
 const INGEST_URL = process.env.INGEST_URL || "http://localhost:3000/ingest/email";
@@ -180,9 +182,24 @@ for (const msg of messages) {
 
   const payload = toIngestPayload(msg);
 
-  await axios.post(INGEST_URL, payload, {
-    headers: { "Content-Type": "application/json" },
-  });
+  try {
+    const resp = await axios.post(INGEST_URL, payload, {
+      headers: { "Content-Type": "application/json" },
+    });
+
+    console.log("INGEST RESPONSE STATUS:", resp.status);
+    console.log("INGEST RESPONSE DATA:", JSON.stringify(resp.data, null, 2));
+    console.log("Ingested email:", msg.subject);
+    processed++;
+  } catch (err) {
+    console.error("INGEST FAILED SUBJECT:", msg.subject);
+    console.error("INGEST FAILED STATUS:", err?.response?.status || null);
+    console.error(
+      "INGEST FAILED DATA:",
+      JSON.stringify(err?.response?.data || null, null, 2)
+    );
+    console.error("INGEST FAILED MESSAGE:", err?.message || String(err));
+  }
 
   console.log("Ingested email:", msg.subject);
   processed++;
@@ -198,7 +215,11 @@ async function runLoop() {
       await main();
       console.log("---- RUN END ----");
     } catch (e) {
-      console.error("LOOP ERROR:", e?.message || e);
+      console.error("LOOP ERROR MESSAGE:", e?.message || String(e));
+      console.error(
+        "LOOP ERROR DATA:",
+        JSON.stringify(e?.response?.data || null, null, 2)
+      );
     }
 
     // aspetta 10 secondi
