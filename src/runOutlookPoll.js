@@ -1,45 +1,27 @@
 require("dotenv").config();
 
 const { PublicClientApplication } = require("@azure/msal-node");
-const fs = require("fs");
-const path = require("path");
 const axios = require("axios");
+const { createClient } = require("@supabase/supabase-js");
 
-console.log("RUNOUTLOOKPOLL DEBUG V2 LOADED");
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+console.log("RUNOUTLOOKPOLL SUPABASE STATE LOADED");
 
 // ---- CONFIG ----
-const RESTAURANT_ID = process.env.RESTAURANT_ID; // UUID del ristorante
+const RESTAURANT_ID = process.env.RESTAURANT_ID;
 const INGEST_URL = process.env.INGEST_URL || "http://localhost:3000/ingest/email";
-
-// ---- STATE (deltaLink) ----
-const STATE_PATH = path.join(__dirname, "../data/outlook_state.json");
-const STATE_DIR = path.dirname(STATE_PATH);
-
-function ensureStateDir() {
-  if (!fs.existsSync(STATE_DIR)) {
-    fs.mkdirSync(STATE_DIR, { recursive: true });
-  }
-}
-
-function loadState() {
-  ensureStateDir();
-
-  if (fs.existsSync(STATE_PATH)) {
-    return JSON.parse(fs.readFileSync(STATE_PATH, "utf-8"));
-  }
-
-  return { deltaLink: null };
-}
-
-function saveState(state) {
-  ensureStateDir();
-  fs.writeFileSync(STATE_PATH, JSON.stringify(state, null, 2));
-}
-
-const state = loadState();
 
 if (!RESTAURANT_ID) {
   console.error("Missing RESTAURANT_ID env var");
+  process.exit(1);
+}
+
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env var");
   process.exit(1);
 }
 
@@ -50,8 +32,48 @@ const pca = new PublicClientApplication({
   },
 });
 
+async function loadState() {
+  const { data, error } = await supabase
+    .from("integration_state")
+    .select("state_value")
+    .eq("restaurant_id", RESTAURANT_ID)
+    .eq("provider", "outlook")
+    .eq("state_key", "delta_link")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`loadState failed: ${error.message}`);
+  }
+
+  return data?.state_value || { deltaLink: null };
+}
+
+async function saveState(state) {
+  const { error } = await supabase
+    .from("integration_state")
+    .upsert(
+      [
+        {
+          restaurant_id: RESTAURANT_ID,
+          provider: "outlook",
+          state_key: "delta_link",
+          state_value: state,
+          updated_at: new Date().toISOString(),
+        },
+      ],
+      {
+        onConflict: "restaurant_id,provider,state_key",
+      }
+    );
+
+  if (error) {
+    throw new Error(`saveState failed: ${error.message}`);
+  }
+}
+
 function looksLikeBooking(msg) {
   const text = `${msg.subject || ""}\n${msg.bodyPreview || ""}`.toLowerCase();
+
   const keywords = [
     "book",
     "booking",
@@ -63,6 +85,7 @@ function looksLikeBooking(msg) {
     "tonight",
     "tomorrow",
   ];
+
   return keywords.some((k) => text.includes(k));
 }
 
@@ -75,43 +98,41 @@ function toIngestPayload(msg) {
     customer_email: fromEmail,
     customer_name: customerName,
     thread_id: msg.conversationId || msg.id,
-    message_text: `${msg.subject}\n\n${msg.bodyPreview}`,
+    message_text: `${msg.subject || ""}\n\n${msg.bodyPreview || ""}`,
     email_event: {
       message_id: msg.id,
       thread_id: msg.conversationId || msg.id,
       from: fromEmail,
-      subject: msg.subject,
-      body: msg.bodyPreview,
+      subject: msg.subject || "",
+      body: msg.bodyPreview || "",
       received_at: msg.receivedDateTime || null,
       provider: "outlook",
     },
   };
 }
 
-async function main() {
+async function getAccessToken() {
   if (process.env.MS_TOKEN_CACHE) {
     try {
       pca.getTokenCache().deserialize(process.env.MS_TOKEN_CACHE);
       console.log("✅ Token cache loaded");
     } catch (e) {
       console.error("❌ Failed to load token cache", e);
-      return;
+      throw e;
     }
   }
 
-const accounts = await pca.getTokenCache().getAllAccounts();
+  const accounts = await pca.getTokenCache().getAllAccounts();
   console.log("ACCOUNTS FOUND:", accounts.length);
+
   if (accounts[0]) {
     console.log("ACCOUNT USERNAME:", accounts[0].username);
   }
 
-let result;
+  if (!accounts.length) {
+    console.log("No account found → starting device login...");
 
-if (!accounts.length) {
-  console.log("No account found → starting device login...");
-
-  try {
-    result = await pca.acquireTokenByDeviceCode({
+    const result = await pca.acquireTokenByDeviceCode({
       scopes: ["User.Read", "Mail.Read", "Mail.Send", "offline_access"],
       deviceCodeCallback: (response) => {
         console.log("\n=== DEVICE LOGIN ===");
@@ -119,91 +140,109 @@ if (!accounts.length) {
         console.log("====================\n");
       },
     });
-  } catch (e) {
-    console.error("❌ Device login failed:", e?.message || e);
+
+    return result.accessToken;
+  }
+
+  const result = await pca.acquireTokenSilent({
+    account: accounts[0],
+    scopes: ["User.Read", "Mail.Read", "Mail.Send", "offline_access"],
+  });
+
+  return result.accessToken;
+}
+
+async function main() {
+  const state = await loadState();
+  const accessToken = await getAccessToken();
+
+  console.log("Access token acquired ✅");
+  console.log("CURRENT DELTA LINK EXISTS:", !!state.deltaLink);
+
+  const isFirstRun = !state.deltaLink;
+
+  const deltaUrl =
+    state.deltaLink ||
+    "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages/delta?$select=id,subject,from,receivedDateTime,conversationId,bodyPreview";
+
+  const r = await axios.get(deltaUrl, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const messages = r.data.value || [];
+  console.log("MESSAGES FOUND:", messages.length);
+
+  const nextDeltaLink = r.data["@odata.deltaLink"] || r.data["@odata.nextLink"];
+
+  if (nextDeltaLink) {
+    state.deltaLink = nextDeltaLink;
+    await saveState(state);
+    console.log("✅ Delta state saved");
+  }
+
+  if (isFirstRun) {
+    console.log("Initial delta state saved. Skipping old emails.");
     return;
   }
-} else {
-  try {
-    result = await pca.acquireTokenSilent({
-      account: accounts[0],
-      scopes: ["User.Read", "Mail.Read", "Mail.Send", "offline_access"],
-    });
-  } catch (e) {
-    console.error("❌ Silent token failed:", e?.message || e);
-    return;
-  }
-}
 
-console.log("Access token acquired ✅");
+  let processed = 0;
+  let skipped = 0;
 
-// TEMP DEBUG: reset delta state
+  for (const msg of messages) {
+    console.log("MSG SUBJECT:", msg.subject);
+    console.log("MSG FROM:", msg.from?.emailAddress?.address);
+    console.log("MSG RECEIVED:", msg.receivedDateTime);
+    console.log("MSG ID:", msg.id);
+    console.log("MSG THREAD:", msg.conversationId || msg.id);
 
-const isFirstRun = !state.deltaLink;
+    const fromEmail = msg.from?.emailAddress?.address || "";
+    if (!fromEmail) {
+      skipped++;
+      continue;
+    }
 
-const deltaUrl =
-  state.deltaLink ||
-  "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages/delta?$select=id,subject,from,receivedDateTime,conversationId,bodyPreview";
+    if (fromEmail.includes("accountprotection.microsoft.com")) {
+      skipped++;
+      continue;
+    }
 
-const r = await axios.get(deltaUrl, {
-  headers: { Authorization: `Bearer ${result.accessToken}` },
-});
+    if (!looksLikeBooking(msg)) {
+      console.log("SKIP non-booking:", msg.subject);
+      skipped++;
+      continue;
+    }
 
-const messages = r.data.value || [];
-console.log("MESSAGES FOUND:", messages.length);
+    const payload = toIngestPayload(msg);
 
-const deltaLink = r.data["@odata.deltaLink"] || r.data["@odata.nextLink"];
+    try {
+      const resp = await axios.post(INGEST_URL, payload, {
+        headers: { "Content-Type": "application/json" },
+      });
 
-if (deltaLink) {
-  state.deltaLink = deltaLink;
-  saveState(state);
-}
+      console.log("INGEST RESPONSE STATUS:", resp.status);
+      console.log("INGEST RESPONSE DATA:", JSON.stringify(resp.data, null, 2));
 
-if (isFirstRun) {
-  console.log("Initial delta state saved. Skipping old emails.");
-  return;
-}
+      if (resp.data?.skipped) {
+        console.log("⛔ Duplicate skipped by ingest:", msg.subject);
+      } else {
+        console.log("✅ Ingested email:", msg.subject);
+      }
 
-let processed = 0;
-
-for (const msg of messages) {
-  console.log("MSG SUBJECT:", msg.subject);
-  console.log("MSG FROM:", msg.from?.emailAddress?.address);
-  console.log("MSG RECEIVED:", msg.receivedDateTime);
-
-  const fromEmail = msg.from?.emailAddress?.address || "";
-  if (!fromEmail) continue;
-
-  if (!fromEmail) continue;
-
-  if (fromEmail.includes("accountprotection.microsoft.com")) continue;
-
-  if (!looksLikeBooking(msg)) continue;
-
-  const payload = toIngestPayload(msg);
-
-  try {
-    const resp = await axios.post(INGEST_URL, payload, {
-      headers: { "Content-Type": "application/json" },
-    });
-
-    console.log("INGEST RESPONSE STATUS:", resp.status);
-    console.log("INGEST RESPONSE DATA:", JSON.stringify(resp.data, null, 2));
-  } catch (err) {
-    console.error("INGEST FAILED SUBJECT:", msg.subject);
-    console.error("INGEST FAILED STATUS:", err?.response?.status || null);
-    console.error(
-      "INGEST FAILED DATA:",
-      JSON.stringify(err?.response?.data || null, null, 2)
-    );
-    console.error("INGEST FAILED MESSAGE:", err?.message || String(err));
+      processed++;
+    } catch (err) {
+      console.error("INGEST FAILED SUBJECT:", msg.subject);
+      console.error("INGEST FAILED STATUS:", err?.response?.status || null);
+      console.error(
+        "INGEST FAILED DATA:",
+        JSON.stringify(err?.response?.data || null, null, 2)
+      );
+      console.error("INGEST FAILED MESSAGE:", err?.message || String(err));
+    }
   }
 
-  console.log("Ingested email:", msg.subject);
-  processed++;
-}
-
-  console.log(`Processed ${processed} emails.`);
+  console.log(`Processed ${processed} emails. Skipped ${skipped} emails.`);
 }
 
 async function runLoop() {
@@ -220,7 +259,6 @@ async function runLoop() {
       );
     }
 
-    // aspetta 10 secondi
     await new Promise((r) => setTimeout(r, 10000));
   }
 }
