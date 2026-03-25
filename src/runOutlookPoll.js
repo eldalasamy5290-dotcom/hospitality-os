@@ -189,8 +189,6 @@ for (const msg of messages) {
 
     console.log("INGEST RESPONSE STATUS:", resp.status);
     console.log("INGEST RESPONSE DATA:", JSON.stringify(resp.data, null, 2));
-    console.log("Ingested email:", msg.subject);
-    processed++;
   } catch (err) {
     console.error("INGEST FAILED SUBJECT:", msg.subject);
     console.error("INGEST FAILED STATUS:", err?.response?.status || null);
