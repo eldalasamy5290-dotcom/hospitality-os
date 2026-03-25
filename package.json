@@ -5,10 +5,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-  "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-  "start": "tsx src/server.ts"
-}, 
- "keywords": [],
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "start": "tsx src/server.ts"
+  },
+  "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -23,6 +23,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^25.3.3",
     "ts-node-dev": "^2.0.0",
