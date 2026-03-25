@@ -32,6 +32,10 @@ CRITICAL RULES:
 - Only ask for missing information
 - Keep messages concise and easy to read
 - Never use placeholders like [Restaurant Name] or [Your Name]
+- Never use placeholders such as [Your Name], [Restaurant Name], [Business Name], or similar
+- Do not add a signature with a person's name unless it is explicitly provided
+- If no business signature is provided, end naturally without a fake signature
+
 
 BOOKING LOGIC:
 - NEVER make the booking sound confirmed
@@ -68,6 +72,11 @@ OUTPUT:
 - Only return the email body
 - No subject line
 - No JSON
+- Do not include placeholder signatures
+- If needed, end with a simple natural closing like:
+  "Thanks,"
+  "Speak soon,"
+  "Looking forward to hearing from you"
 `;
 
   const user = `

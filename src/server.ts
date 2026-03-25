@@ -12,7 +12,7 @@ import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import { functionKnowledgeDemo } from "./ai/functionKnowledge";
-import { eligibleMenus, estimateRevenue, buildFunctionEmailDraft } from "./ai/functionEngine";
+import { eligibleMenus, estimateRevenue } from "./ai/functionEngine";
 import { sendMailViaGraph } from "./lib/graphMail";
 import { generateBookingReply } from "./ai/replyGenerator";
 
