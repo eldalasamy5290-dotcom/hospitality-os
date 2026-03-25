@@ -79,7 +79,7 @@ function renderDraftCard(draft) {
   const status = draft.status || "draft";
 
   return `
-    <div class="request-card">
+    <div class="request-card" data-id="${draft.id}">
       <div class="request-header">
         <div>
           <div class="request-type">${title}</div>
@@ -122,7 +122,10 @@ function renderDraftCard(draft) {
         status === "draft"
           ? `
           <div class="request-actions">
-            <button class="approve-btn" onclick="approve('${draft.id}')">Approve & Send</button>
+            <div class="request-actions">
+  <button class="edit-btn" onclick="editDraft('${draft.id}')">Edit</button>
+  <button class="approve-btn" onclick="approve('${draft.id}')">Approve & Send</button>
+</div>
           </div>
         `
           : ""
@@ -214,5 +217,45 @@ async function approveAction(id) {
   } catch (err) {
     console.error("approveAction error", err);
     alert("Network/server error on approve action");
+  }
+
+  function editDraft(id) {
+  const card = document.querySelector(`[data-id="${id}"]`);
+  const bodyDiv = card.querySelector(".request-body");
+
+  const currentText = bodyDiv.innerText;
+
+  bodyDiv.innerHTML = `
+    <textarea class="edit-textarea">${currentText}</textarea>
+    <button onclick="saveDraft('${id}')">Save</button>
+  `;
+}
+}
+async function saveDraft(id) {
+  const card = document.querySelector(`[data-id="${id}"]`);
+  const textarea = card.querySelector(".edit-textarea");
+
+  const newBody = textarea.value;
+
+  try {
+    const res = await fetch(`/drafts/${id}/update`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ body: newBody }),
+    });
+
+    const json = await res.json();
+
+    if (!json.ok) {
+      alert("Update failed");
+      return;
+    }
+
+    await loadRequests();
+  } catch (err) {
+    console.error(err);
+    alert("Error saving draft");
   }
 }

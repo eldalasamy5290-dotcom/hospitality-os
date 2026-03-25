@@ -1055,7 +1055,30 @@ app.get("/actions", async (req, res) => {
 });
 
 
+app.post("/drafts/:id/update", async (req, res) => {
+  const id = req.params.id;
+  const body = String(req.body?.body ?? "");
 
+  if (!body) {
+    return res.status(400).json({ ok: false, error: "body required" });
+  }
+
+  const { data, error } = await supabase
+    .from("draft_replies")
+    .update({
+      body,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) {
+    return res.status(500).json({ ok: false, error: error.message });
+  }
+
+  return res.json({ ok: true, draft: data });
+});
 
 // approve draft reply
 app.post("/drafts/:id/approve", async (req, res) => {

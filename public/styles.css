@@ -179,3 +179,11 @@ button {
   opacity: 0.85;
   line-height: 1.4;
 }
+
+.edit-textarea {
+  width: 100%;
+  min-height: 120px;
+  margin-top: 10px;
+  border-radius: 8px;
+  padding: 10px;
+}
