@@ -248,19 +248,24 @@ if (extract.people) {
   }
 }
 
-  const draftEmail = buildFunctionEmailDraft({
-    restaurantName,
-    extract,
-    eligible,
-    add_ons: functionKnowledgeDemo.add_ons,
-  });
-
   const internalHeader =
-    revenue
-      ? `INTERNAL EVENT ESTIMATE\nGuests: ${extract.people}\nFood: $${revenue.food}\nDrinks (est): $${revenue.drinks}\nTotal (est): $${revenue.total}\n\n---\n\n`
-      : `INTERNAL EVENT ESTIMATE\nGuests: ${extract.people ?? "unknown"}\nTotal (est): unknown\n\n---\n\n`;
+  revenue
+    ? `INTERNAL EVENT ESTIMATE\nGuests: ${extract.people}\nFood: $${revenue.food}\nDrinks (est): $${revenue.drinks}\nTotal (est): $${revenue.total}\n\n---\n\n`
+    : `INTERNAL EVENT ESTIMATE\nGuests: ${extract.people ?? "unknown"}\nTotal (est): unknown\n\n---\n\n`;
 
-  const finalBody = internalHeader + draftEmail.body;
+const aiFunctionReply = await generateBookingReply({
+  customer_name: null,
+  people: extract.people,
+  booking_date_iso: null,
+  time: null,
+  dietary: null,
+  occasion: extract.occasion ?? "function",
+  missing: ["name", "dietary requirements", "preferred timing"],
+  isFunctionLead: true,
+  now_perth_iso,
+});
+
+const finalBody = internalHeader + aiFunctionReply;
 
   const { data: savedDraft, error: dErr } = await supabase
     .from("draft_replies")
@@ -269,7 +274,7 @@ if (extract.people) {
         restaurant_id: p.restaurant_id,
         thread_id: savedEvent?.thread_id ?? (p.thread_id ?? null),
         to_email: (emailEvent?.from ?? p.customer_email) ?? null,
-        subject: draftEmail.subject,
+        subject: "Re: Function enquiry",
         body: finalBody,
         status: "draft",
       },
@@ -352,9 +357,21 @@ if (bookingInboxErr) {
 }
 
   // 2) upsert customer
+const { data: existingCustomer, error: existingCustomerErr } = await supabase
+  .from("customers")
+  .select("id,email,name")
+  .eq("restaurant_id", p.restaurant_id)
+  .eq("email", p.customer_email)
+  .maybeSingle();
+
+if (existingCustomerErr) {
+  return res.status(500).json({ ok: false, error: existingCustomerErr.message });
+}
+
 const knownName =
   extractedNameFromMessage ||
   (p.customer_name && p.customer_name.trim()) ||
+  existingCustomer?.name ||
   null;
 
   const { data: customer, error: custErr } = await supabase
