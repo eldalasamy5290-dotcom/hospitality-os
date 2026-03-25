@@ -787,7 +787,7 @@ app.get("/dashboard/timeline", async (req, res) => {
   const [inbox, bookings, drafts, actions] = await Promise.all([
     supabase
       .from("inbox_events")
-      .select("id,created_at,classified_type,classified_confidence,from_email,subject,thread_id,provider")
+      .select("id,created_at,classified_type,classified_confidence,from_email,subject,thread_id,provider,body_preview")
       .eq("restaurant_id", restaurant_id)
       .order("created_at", { ascending: false })
       .limit(perTable),
@@ -831,6 +831,7 @@ app.get("/dashboard/timeline", async (req, res) => {
         provider: row.provider,
         from: row.from_email,
         subject: row.subject,
+        snippet: row.body_preview,
         confidence: row.classified_confidence,
         thread_id: row.thread_id,
         id: row.id,

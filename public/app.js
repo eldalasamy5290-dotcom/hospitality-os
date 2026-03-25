@@ -7,21 +7,43 @@ console.log("APP JS LOADED 🔥");
 async function loadRequests() {
   const draftsRes = await fetch(`/drafts?restaurant_id=${restaurantId}`);
   const actionsRes = await fetch(`/actions?restaurant_id=${restaurantId}`);
+  const timelineRes = await fetch(`/dashboard/timeline?restaurant_id=${restaurantId}&limit=50`);
 
   const draftsJson = await draftsRes.json();
   const actionsJson = await actionsRes.json();
+  const timelineJson = await timelineRes.json();
 
   const drafts = draftsJson.data || [];
   const actions = actionsJson.data || [];
+  const timelineItems = timelineJson.data || [];
+
+  const inboxEvents = timelineItems.filter((item) => item.kind === "inbox_event");
+
+  const draftsWithContext = drafts.map((draft) => {
+    const matchedEmail = inboxEvents.find(
+      (item) => item.meta?.thread_id && item.meta.thread_id === draft.thread_id
+    );
+
+    return {
+      ...draft,
+      original_email: matchedEmail
+        ? {
+            subject: matchedEmail.meta?.subject || "",
+            from: matchedEmail.meta?.from || "",
+            snippet: matchedEmail.meta?.snippet || "",
+          }
+        : null,
+    };
+  });
 
   const requestsContainer = document.getElementById("requests");
   const upcomingContainer = document.getElementById("upcoming");
   const actionsContainer = document.getElementById("actions");
 
-  if (!drafts.length) {
+  if (!draftsWithContext.length) {
     requestsContainer.innerHTML = "<p>No new requests.</p>";
   } else {
-    requestsContainer.innerHTML = drafts.slice(0, 5).map(renderDraftCard).join("");
+    requestsContainer.innerHTML = draftsWithContext.slice(0, 5).map(renderDraftCard).join("");
   }
 
   if (!actions.length) {
@@ -40,6 +62,11 @@ async function loadRequests() {
 function renderDraftCard(draft) {
   const body = draft.body || "";
   const lower = body.toLowerCase();
+
+  const originalEmail = draft.original_email || null;
+  const originalSubject = originalEmail?.subject || "No subject";
+  const originalFrom = originalEmail?.from || "";
+  const originalSnippet = originalEmail?.snippet || "";
 
   const isFunction =
     lower.includes("set menu") ||
@@ -60,6 +87,19 @@ function renderDraftCard(draft) {
         </div>
         <div class="badge ${status === "sent" ? "badge-sent" : "badge-draft"}">${status}</div>
       </div>
+
+      ${
+        originalEmail
+          ? `
+          <div class="original-email-box">
+            <div class="original-email-title">Original Email</div>
+            <div><strong>Subject:</strong> ${originalSubject}</div>
+            <div><strong>From:</strong> ${originalFrom}</div>
+            <div class="original-email-snippet">${originalSnippet.replace(/\n/g, "<br/>")}</div>
+          </div>
+        `
+          : ""
+      }
 
       <div class="request-body">
         ${body.replace(/\n/g, "<br/>")}
