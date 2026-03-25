@@ -9,7 +9,18 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-console.log("RUNOUTLOOKPOLL SUPABASE STATE V3");
+async function markMessageAsRead(messageId, accessToken) {
+  await axios.patch(
+    `https://graph.microsoft.com/v1.0/me/messages/${messageId}`,
+    { isRead: true },
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+}
 
 // ---- CONFIG ----
 const RESTAURANT_ID = process.env.RESTAURANT_ID;
@@ -220,31 +231,31 @@ console.log("CURRENT DELTA LINK EXISTS:", !!state.deltaLink);
     const payload = toIngestPayload(msg);
 
     try {
-      const resp = await axios.post(INGEST_URL, payload, {
-        headers: { "Content-Type": "application/json" },
-      });
+  const resp = await axios.post(INGEST_URL, payload, {
+    headers: { "Content-Type": "application/json" },
+  });
 
-      await markMessageAsRead(msg.id, accessToken);
+  console.log("INGEST RESPONSE STATUS:", resp.status);
+  console.log("INGEST RESPONSE DATA:", JSON.stringify(resp.data, null, 2));
 
-      console.log("INGEST RESPONSE STATUS:", resp.status);
-      console.log("INGEST RESPONSE DATA:", JSON.stringify(resp.data, null, 2));
+  if (resp.data?.skipped) {
+    console.log("⛔ Duplicate skipped by ingest:", msg.subject);
+  } else {
+    console.log("✅ Ingested email:", msg.subject);
+  }
 
-      if (resp.data?.skipped) {
-        console.log("⛔ Duplicate skipped by ingest:", msg.subject);
-      } else {
-        console.log("✅ Ingested email:", msg.subject);
-      }
+  await markMessageAsRead(msg.id, accessToken);
 
-      processed++;
-    } catch (err) {
-      console.error("INGEST FAILED SUBJECT:", msg.subject);
-      console.error("INGEST FAILED STATUS:", err?.response?.status || null);
-      console.error(
-        "INGEST FAILED DATA:",
-        JSON.stringify(err?.response?.data || null, null, 2)
-      );
-      console.error("INGEST FAILED MESSAGE:", err?.message || String(err));
-    }
+  processed++;
+} catch (err) {
+  console.error("INGEST FAILED SUBJECT:", msg.subject);
+  console.error("INGEST FAILED STATUS:", err?.response?.status || null);
+  console.error(
+    "INGEST FAILED DATA:",
+    JSON.stringify(err?.response?.data || null, null, 2)
+  );
+  console.error("INGEST FAILED MESSAGE:", err?.message || String(err));
+}
   }
 
   console.log(`Processed ${processed} emails. Skipped ${skipped} emails.`);
