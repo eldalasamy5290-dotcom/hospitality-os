@@ -294,8 +294,27 @@ const finalBody = internalHeader + aiFunctionReply;
   });
 }
 
+let existingBookingByThread: any = null;
+
+if (p.thread_id) {
+  const { data: foundExistingBooking, error: existingBookingByThreadErr } = await supabase
+    .from("bookings")
+    .select("*")
+    .eq("restaurant_id", p.restaurant_id)
+    .eq("thread_id", p.thread_id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingBookingByThreadErr) {
+    return res.status(500).json({ ok: false, error: existingBookingByThreadErr.message });
+  }
+
+  existingBookingByThread = foundExistingBooking;
+}
+
 // if not booking and not function → save inbox_event and stop
-if (result.type !== "booking") {
+if (result.type !== "booking" && !existingBookingByThread) {
   const emailEvent = (p as any).email_event ?? null;
 
   const { data: saved, error: evErr } = await supabase
