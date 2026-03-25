@@ -325,7 +325,9 @@ if (result.type !== "booking") {
 
 const extracted = result.booking!;
 const emailEvent = (p as any).email_event ?? null;
-const extractedNameFromMessage = extractNameFromMessage(p.message_text);
+const extractedNameFromMessage = extractNameFromMessage(
+  (p.message_text || "").toLowerCase()
+);
 
 const { error: bookingInboxErr } = await supabase
   .from("inbox_events")
@@ -508,6 +510,7 @@ const replyBody = await generateBookingReply({
   occasion: final_occasion,
   missing: missingFields,
   isFunctionLead,
+  now_perth_iso,
 });
 
 // RULE:

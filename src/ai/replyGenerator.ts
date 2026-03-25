@@ -2,7 +2,7 @@ import OpenAI from "openai";
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-type GenerateBookingReplyInput = {
+export type GenerateBookingReplyInput = {
   customer_name: string | null;
   people: number | null;
   booking_date_iso: string | null;
@@ -31,7 +31,7 @@ CRITICAL RULES:
 - If the customer's name is missing, ask for it naturally
 - Only ask for missing information
 - Keep messages concise and easy to read
-- No placeholders like [Restaurant Name]
+- Never use placeholders like [Restaurant Name] or [Your Name]
 
 BOOKING LOGIC:
 - NEVER make the booking sound confirmed
