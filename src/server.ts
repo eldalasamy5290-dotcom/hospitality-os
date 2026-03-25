@@ -215,10 +215,13 @@ if (result.type === "function") {
     notes: null,
   };
 
-  const functionMissing: string[] = [];
+  // 👉 Build missing fields dynamically
+const functionMissing: string[] = [];
 
 if (!extract.people) functionMissing.push("guest count");
 if (!extract.date_hint) functionMissing.push("date and time");
+
+// Always needed for now
 functionMissing.push("name");
 functionMissing.push("dietary requirements");
 
