@@ -91,7 +91,7 @@ function looksLikeBooking(msg) {
 
 function toIngestPayload(msg) {
   const fromEmail = msg.from?.emailAddress?.address || "";
-  const customerName = fromEmail ? fromEmail.split("@")[0] : "Unknown";
+  const customerName = null;
 
   return {
     restaurant_id: RESTAURANT_ID,

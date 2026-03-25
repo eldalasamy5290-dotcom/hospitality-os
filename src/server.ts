@@ -14,7 +14,7 @@ import path from "path";
 import { functionKnowledgeDemo } from "./ai/functionKnowledge";
 import { eligibleMenus, estimateRevenue, buildFunctionEmailDraft } from "./ai/functionEngine";
 import { sendMailViaGraph } from "./lib/graphMail";
-
+import { generateBookingReply } from "./ai/replyGenerator";
 
 const app = express();
 
@@ -462,29 +462,26 @@ if (bookingInboxErr) {
 
 
 // -------- DEMO: create/update draft reply --------
-let replyBody = "";
+const knownName =
+  (p.customer_name && p.customer_name.trim()) || null;
 
-if (missing.length === 0) {
-  replyBody = `Hi,
-
-Thanks for your booking request.
-
-We received your booking for ${final_people} people on ${final_booking_date_iso} at ${final_time}.
-
-Your reservation is currently pending confirmation.
-
-Best regards`;
-} else {
-  replyBody = `Hi,
-
-Thanks for your message.
-
-To complete your booking we still need: ${missing.join(", ")}.
-
-Please reply with the missing information.
-
-Best regards`;
+const missingFields = [...missing];
+if (!knownName) {
+  missingFields.unshift("name");
 }
+
+const isFunctionLead = Boolean(final_people && final_people >= 15);
+
+const replyBody = await generateBookingReply({
+  customer_name: knownName,
+  people: final_people,
+  booking_date_iso: final_booking_date_iso,
+  time: final_time,
+  dietary: final_dietary,
+  occasion: final_occasion,
+  missing: missingFields,
+  isFunctionLead,
+});
 
 // RULE:
 // Use booking_id as primary key for draft lookup.
