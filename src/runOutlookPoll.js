@@ -9,7 +9,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-console.log("RUNOUTLOOKPOLL SUPABASE STATE LOADED");
+console.log("RUNOUTLOOKPOLL SUPABASE STATE V3");
 
 // ---- CONFIG ----
 const RESTAURANT_ID = process.env.RESTAURANT_ID;
@@ -155,6 +155,9 @@ async function getAccessToken() {
 async function main() {
   const state = await loadState();
   const accessToken = await getAccessToken();
+
+console.log("LOADED STATE:", JSON.stringify(state, null, 2));
+console.log("CURRENT DELTA LINK EXISTS:", !!state.deltaLink);
 
   console.log("Access token acquired ✅");
   console.log("CURRENT DELTA LINK EXISTS:", !!state.deltaLink);
