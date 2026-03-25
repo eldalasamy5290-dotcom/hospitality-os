@@ -82,7 +82,7 @@ if (process.env.RUN_POLL_ON_BOOT === "false") {
 const IngestEmailSchema = z.object({
   restaurant_id: z.string().uuid(),
   customer_email: z.string().email(),
-  customer_name: z.string().optional(),
+  customer_name: z.string().nullable().optional(),
   thread_id: z.string().optional(),
   message_text: z.string().min(3),
   email_event: z.any().optional(),
