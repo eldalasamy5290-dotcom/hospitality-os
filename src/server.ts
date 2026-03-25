@@ -14,7 +14,7 @@ import path from "path";
 import { functionKnowledgeDemo } from "./ai/functionKnowledge";
 import { eligibleMenus, estimateRevenue, buildFunctionEmailDraft } from "./ai/functionEngine";
 import { sendMailViaGraph } from "./lib/graphMail";
-import { spawn } from "child_process";
+
 
 const app = express();
 
@@ -70,7 +70,7 @@ app.post("/webhooks/outlook", (req, res) => {
 });
 
 // Trigger async: run delta sync + ingest
-if (process.env.RUN_POLL_ON_BOOT === "true") {
+if (process.env.RUN_POLL_ON_BOOT === "false") {
  spawn("node", ["src/runOutlookPoll.js"], {
   cwd: process.cwd(),
   env: process.env,
@@ -100,6 +100,30 @@ app.post("/ingest/email", async (req, res) => {
 
     const p = parsed.data;
 
+    const incomingMessageId = p.email_event?.message_id ?? null;
+
+if (incomingMessageId) {
+  const { data: existingInboxEvents, error: existingInboxEventErr } = await supabase
+    .from("inbox_events")
+    .select("id")
+    .eq("restaurant_id", p.restaurant_id)
+    .eq("message_id", incomingMessageId)
+    .limit(1);
+
+  if (existingInboxEventErr) {
+    return res.status(500).json({ ok: false, error: existingInboxEventErr.message });
+  }
+
+  if (existingInboxEvents && existingInboxEvents.length > 0) {
+    console.log("⛔ SKIP duplicate message_id:", incomingMessageId);
+    return res.json({
+      ok: true,
+      skipped: true,
+      reason: "message_already_processed",
+    });
+  }
+}
+
   try {
 
 // 1) AI processing
@@ -119,8 +143,7 @@ const result = await processIncomingEmail({
 
     console.log("INGEST RESULT TYPE:", result.type);
     console.log("PROCESS INCOMING EMAIL RESULT:", JSON.stringify(result, null, 2));
-    console.log("PROCESS INCOMING EMAIL RESULT:", JSON.stringify(result, null, 2));
-
+    
 // if function → save inbox_event + create function draft (+ revenue) + stop
 if (result.type === "function") {
   const emailEvent = (p as any).email_event ?? null;
@@ -381,21 +404,17 @@ if (bookingInboxErr) {
     const { data: updatedBooking, error: updateErr } = await supabase
       .from("bookings")
       .update({
-        customer_id: customer.id,
-        time: extracted.time ?? existingBooking.time,
-        people: extracted.people ?? existingBooking.people,
-        dietary: extracted.dietary ?? existingBooking.dietary,
-        occasion: extracted.occasion ?? existingBooking.occasion,
-        booking_date_iso: final_booking_date_iso,
-        time: final_time,
-        people: final_people,
-        dietary: final_dietary,
-        occasion: final_occasion,
-        status,
-        confidence: extracted.confidence ?? existingBooking.confidence,
-        history: mergedHistory,
-        updated_at: new Date().toISOString(),
-      })
+  customer_id: customer.id,
+  booking_date_iso: final_booking_date_iso,
+  time: final_time,
+  people: final_people,
+  dietary: final_dietary,
+  occasion: final_occasion,
+  status,
+  confidence: extracted.confidence ?? existingBooking.confidence,
+  history: mergedHistory,
+  updated_at: new Date().toISOString(),
+})
       .eq("id", existingBooking.id)
       .select("*")
       .single();
@@ -631,15 +650,26 @@ app.get("/health/db", async (req, res) => {
 });
 
 app.get("/routes", (req, res) => {
-  res.json({
+  return res.json({
     ok: true,
     routes: [
       "GET /",
+      "GET /demo",
       "GET /health/db",
       "GET /routes",
+      "GET /dashboard?restaurant_id=...",
+      "GET /dashboard/timeline?restaurant_id=...&limit=...",
+      "GET /inbox-events?restaurant_id=...&limit=...",
+      "GET /drafts?restaurant_id=...",
+      "GET /actions?restaurant_id=...",
+      "GET /webhooks/outlook",
+      "POST /webhooks/outlook",
       "POST /restaurants",
       "POST /bookings",
       "POST /ai/extract-booking",
+      "POST /ingest/email",
+      "POST /drafts/:id/approve",
+      "POST /actions/:id/approve",
     ],
   });
 });
@@ -766,21 +796,21 @@ app.get("/dashboard/timeline", async (req, res) => {
 
     supabase
       .from("bookings")
-      .select("id,created_at,status,people,booking_date_iso,time,thread_id,source")
+      .select("id,created_at,updated_at,status,people,booking_date_iso,time,thread_id,source")
       .eq("restaurant_id", restaurant_id)
       .order("created_at", { ascending: false })
       .limit(perTable),
 
     supabase
       .from("draft_replies")
-      .select("id,created_at,status,to_email,subject,thread_id")
+      .select("id,created_at,updated_at,status,to_email,subject,thread_id")
       .eq("restaurant_id", restaurant_id)
       .order("created_at", { ascending: false })
       .limit(perTable),
 
     supabase
       .from("outbox_actions")
-      .select("id,created_at,status,provider,action_type,thread_id,payload")
+      .select("id,created_at,updated_at,status,provider,action_type,thread_id,payload")
       .eq("restaurant_id", restaurant_id)
       .order("created_at", { ascending: false })
       .limit(perTable),
@@ -814,7 +844,7 @@ app.get("/dashboard/timeline", async (req, res) => {
 
   for (const row of bookings.data ?? []) {
     items.push({
-      ts: row.created_at,
+      ts: row.updated_at ?? row.created_at,
       kind: "booking",
       label: `Booking ${row.status} (${row.people ?? "?"}p) ${row.booking_date_iso ?? ""} ${row.time ?? ""}`,
       meta: {
@@ -827,7 +857,7 @@ app.get("/dashboard/timeline", async (req, res) => {
 
 for (const row of drafts.data ?? []) {
   items.push({
-    ts: row.created_at,
+    ts: row.updated_at ?? row.created_at,
     kind: "draft_reply",
     label: `Draft reply: ${row.status}`,
     meta: {
@@ -842,7 +872,7 @@ for (const row of drafts.data ?? []) {
 
   for (const row of actions.data ?? []) {
     items.push({
-      ts: row.created_at,
+      ts: row.updated_at ?? row.created_at,
       kind: "outbox_action",
       label: `Action ${row.provider}:${row.action_type} (${row.status})`,
       meta: {
@@ -986,7 +1016,11 @@ app.post("/ai/extract-booking", async (req, res) => {
 
 // get draft replies
 app.get("/drafts", async (req, res) => {
-  const restaurant_id = req.query.restaurant_id as string;
+  const restaurant_id = String(req.query.restaurant_id ?? "");
+
+  if (!restaurant_id) {
+    return res.status(400).json({ ok: false, error: "restaurant_id required" });
+  }
 
   const { data, error } = await supabase
     .from("draft_replies")
@@ -995,15 +1029,21 @@ app.get("/drafts", async (req, res) => {
     .order("created_at", { ascending: false })
     .limit(10);
 
-  if (error) return res.status(500).json({ ok: false, error: error.message });
+  if (error) {
+    return res.status(500).json({ ok: false, error: error.message });
+  }
 
-  res.json({ ok: true, data });
+  return res.json({ ok: true, data: data ?? [] });
 });
 
 
 // get outbox actions
 app.get("/actions", async (req, res) => {
-  const restaurant_id = req.query.restaurant_id as string;
+  const restaurant_id = String(req.query.restaurant_id ?? "");
+
+  if (!restaurant_id) {
+    return res.status(400).json({ ok: false, error: "restaurant_id required" });
+  }
 
   const { data, error } = await supabase
     .from("outbox_actions")
@@ -1012,13 +1052,15 @@ app.get("/actions", async (req, res) => {
     .order("created_at", { ascending: false })
     .limit(10);
 
-  if (error) return res.status(500).json({ ok: false, error: error.message });
+  if (error) {
+    return res.status(500).json({ ok: false, error: error.message });
+  }
 
-  res.json({ ok: true, data });
+  return res.json({ ok: true, data: data ?? [] });
 });
 
 
-app.use(express.static(path.join(process.cwd(), "public")));
+
 
 // approve draft reply
 app.post("/drafts/:id/approve", async (req, res) => {
@@ -1062,7 +1104,7 @@ console.log("EMAIL SENT", { id });
     const { data: updated, error: updErr } = await supabase
       .from("draft_replies")
       .update({
-        status: "approved",
+        status: "sent",
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
