@@ -782,8 +782,6 @@ app.get("/dashboard/timeline", async (req, res) => {
     return res.status(400).json({ ok: false, error: "restaurant_id required" });
   }
 
-  // Prendiamo più righe da ogni tabella, poi facciamo merge+sort.
-  // (es: limit*2 per stare larghi)
   const perTable = Math.min(limit * 2, 50);
 
   const [inbox, bookings, drafts, actions] = await Promise.all([
@@ -798,32 +796,30 @@ app.get("/dashboard/timeline", async (req, res) => {
       .from("bookings")
       .select("id,created_at,updated_at,status,people,booking_date_iso,time,thread_id,source")
       .eq("restaurant_id", restaurant_id)
-      .order("created_at", { ascending: false })
+      .order("updated_at", { ascending: false })
       .limit(perTable),
 
     supabase
       .from("draft_replies")
       .select("id,created_at,updated_at,status,to_email,subject,thread_id")
       .eq("restaurant_id", restaurant_id)
-      .order("created_at", { ascending: false })
+      .order("updated_at", { ascending: false })
       .limit(perTable),
 
     supabase
       .from("outbox_actions")
       .select("id,created_at,updated_at,status,provider,action_type,thread_id,payload")
       .eq("restaurant_id", restaurant_id)
-      .order("created_at", { ascending: false })
+      .order("updated_at", { ascending: false })
       .limit(perTable),
   ]);
 
-  // Error handling
   const errors = [inbox.error, bookings.error, drafts.error, actions.error].filter(Boolean);
   if (errors.length) {
     const msg = (errors[0] as any)?.message ?? String(errors[0]);
     return res.status(500).json({ ok: false, error: msg });
   }
 
-  // Normalize into timeline items
   const items: any[] = [];
 
   for (const row of inbox.data ?? []) {
@@ -855,20 +851,20 @@ app.get("/dashboard/timeline", async (req, res) => {
     });
   }
 
-for (const row of drafts.data ?? []) {
-  items.push({
-    ts: row.updated_at ?? row.created_at,
-    kind: "draft_reply",
-    label: `Draft reply: ${row.status}`,
-    meta: {
-      to: row.to_email,
-      subject: row.subject,
-      thread_id: row.thread_id,
-      id: row.id,
-      status: row.status,
-    },
-  });
-}
+  for (const row of drafts.data ?? []) {
+    items.push({
+      ts: row.updated_at ?? row.created_at,
+      kind: "draft_reply",
+      label: `Draft reply: ${row.status}`,
+      meta: {
+        to: row.to_email,
+        subject: row.subject,
+        thread_id: row.thread_id,
+        id: row.id,
+        status: row.status,
+      },
+    });
+  }
 
   for (const row of actions.data ?? []) {
     items.push({
@@ -884,7 +880,6 @@ for (const row of drafts.data ?? []) {
     });
   }
 
-  // Sort desc + cut to limit
   items.sort((a, b) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0));
 
   return res.json({
@@ -894,7 +889,6 @@ for (const row of drafts.data ?? []) {
     data: items.slice(0, limit),
   });
 });
-
 
 
 const CreateRestaurantSchema = z.object({
