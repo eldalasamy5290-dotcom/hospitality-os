@@ -92,16 +92,20 @@ function extractNameFromMessage(message: string): string | null {
   const text = message.trim();
 
   const patterns = [
-    /my name is\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/i,
-    /i'?m\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/i,
-    /this is\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/i,
-    /name[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/i,
+    /my name is\s+([a-zA-Z]+(?:\s+[a-zA-Z]+){0,2})/i,
+    /i\s*'?m\s+([a-zA-Z]+(?:\s+[a-zA-Z]+){0,2})/i,
+    /this is\s+([a-zA-Z]+(?:\s+[a-zA-Z]+){0,2})/i,
+    /name[:\s]+([a-zA-Z]+(?:\s+[a-zA-Z]+){0,2})/i,
   ];
 
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match?.[1]) {
-      return match[1].trim();
+      // Capitalizza bene
+      return match[1]
+        .split(" ")
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(" ");
     }
   }
 
