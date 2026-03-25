@@ -215,6 +215,13 @@ if (result.type === "function") {
     notes: null,
   };
 
+  const functionMissing: string[] = [];
+
+if (!extract.people) functionMissing.push("guest count");
+if (!extract.date_hint) functionMissing.push("date and time");
+functionMissing.push("name");
+functionMissing.push("dietary requirements");
+
   let eligible: any[] = [];
   let revenue: any = null;
 
@@ -256,11 +263,11 @@ if (extract.people) {
 const aiFunctionReply = await generateBookingReply({
   customer_name: null,
   people: extract.people,
-  booking_date_iso: null,
+  booking_date_iso: extract.date_hint ?? null,
   time: null,
   dietary: null,
   occasion: extract.occasion ?? "function",
-  missing: ["name", "dietary requirements", "preferred timing"],
+  missing: functionMissing,
   isFunctionLead: true,
   now_perth_iso,
 });

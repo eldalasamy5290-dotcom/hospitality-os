@@ -144,7 +144,7 @@ async function getAccessToken() {
     console.log("No account found → starting device login...");
 
     const result = await pca.acquireTokenByDeviceCode({
-      scopes: ["User.Read", "Mail.Read", "Mail.Send", "offline_access"],
+      scopes: ["User.Read", "Mail.ReadWrite", "Mail.Send", "offline_access"],
       deviceCodeCallback: (response) => {
         console.log("\n=== DEVICE LOGIN ===");
         console.log(response.message);
@@ -157,7 +157,7 @@ async function getAccessToken() {
 
   const result = await pca.acquireTokenSilent({
     account: accounts[0],
-    scopes: ["User.Read", "Mail.Read", "Mail.Send", "offline_access"],
+    scopes: ["User.Read", "Mail.ReadWrite", "Mail.Send", "offline_access"],
   });
 
   return result.accessToken;
