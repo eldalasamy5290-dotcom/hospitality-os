@@ -218,22 +218,31 @@ async function approveAction(id) {
     console.error("approveAction error", err);
     alert("Network/server error on approve action");
   }
+}
 
-  function editDraft(id) {
+function editDraft(id) {
   const card = document.querySelector(`[data-id="${id}"]`);
+  if (!card) return;
+
   const bodyDiv = card.querySelector(".request-body");
+  if (!bodyDiv) return;
 
   const currentText = bodyDiv.innerText;
 
   bodyDiv.innerHTML = `
     <textarea class="edit-textarea">${currentText}</textarea>
-    <button onclick="saveDraft('${id}')">Save</button>
+    <div class="request-actions" style="margin-top:10px;">
+      <button class="approve-btn" onclick="saveDraft('${id}')">Save</button>
+    </div>
   `;
 }
-}
+
 async function saveDraft(id) {
   const card = document.querySelector(`[data-id="${id}"]`);
+  if (!card) return;
+
   const textarea = card.querySelector(".edit-textarea");
+  if (!textarea) return;
 
   const newBody = textarea.value;
 
@@ -249,13 +258,13 @@ async function saveDraft(id) {
     const json = await res.json();
 
     if (!json.ok) {
-      alert("Update failed");
+      alert("Update failed: " + (json.error || "Unknown error"));
       return;
     }
 
     await loadRequests();
   } catch (err) {
-    console.error(err);
+    console.error("saveDraft error", err);
     alert("Error saving draft");
   }
 }
