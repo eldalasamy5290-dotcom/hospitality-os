@@ -224,6 +224,8 @@ console.log("CURRENT DELTA LINK EXISTS:", !!state.deltaLink);
         headers: { "Content-Type": "application/json" },
       });
 
+      await markMessageAsRead(msg.id, accessToken);
+
       console.log("INGEST RESPONSE STATUS:", resp.status);
       console.log("INGEST RESPONSE DATA:", JSON.stringify(resp.data, null, 2));
 
