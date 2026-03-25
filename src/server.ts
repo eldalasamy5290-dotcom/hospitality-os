@@ -88,6 +88,26 @@ const IngestEmailSchema = z.object({
   email_event: z.any().optional(),
 }).passthrough();
 
+function extractNameFromMessage(message: string): string | null {
+  const text = message.trim();
+
+  const patterns = [
+    /my name is\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/i,
+    /i'?m\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/i,
+    /this is\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/i,
+    /name[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      return match[1].trim();
+    }
+  }
+
+  return null;
+}
+
 app.post("/ingest/email", async (req, res) => {
   console.log("=== INGEST EMAIL HIT ===");
   console.log("INGEST RAW BODY:", JSON.stringify(req.body, null, 2));
@@ -301,6 +321,7 @@ if (result.type !== "booking") {
 
 const extracted = result.booking!;
 const emailEvent = (p as any).email_event ?? null;
+const extractedNameFromMessage = extractNameFromMessage(p.message_text);
 
 const { error: bookingInboxErr } = await supabase
   .from("inbox_events")
@@ -325,14 +346,19 @@ if (bookingInboxErr) {
 }
 
   // 2) upsert customer
+const knownName =
+  extractedNameFromMessage ||
+  (p.customer_name && p.customer_name.trim()) ||
+  null;
+
   const { data: customer, error: custErr } = await supabase
-    .from("customers")
-    .upsert(
-      [{ restaurant_id: p.restaurant_id, email: p.customer_email, name: p.customer_name ?? null }],
-      { onConflict: "restaurant_id,email" }
-    )
-    .select("id,email,name")
-    .single();
+  .from("customers")
+  .upsert(
+    [{ restaurant_id: p.restaurant_id, email: p.customer_email, name: knownName ?? null }],
+    { onConflict: "restaurant_id,email" }
+  )
+  .select("id,email,name")
+  .single();
 
   if (custErr) return res.status(500).json({ ok: false, error: custErr.message });
 
@@ -462,9 +488,6 @@ if (bookingInboxErr) {
 
 
 // -------- DEMO: create/update draft reply --------
-const knownName =
-  (p.customer_name && p.customer_name.trim()) || null;
-
 const missingFields = [...missing];
 if (!knownName) {
   missingFields.unshift("name");
