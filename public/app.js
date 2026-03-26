@@ -75,10 +75,12 @@ function renderDraftCard(draft) {
   const originalFrom = originalEmail?.from || "";
   const originalSnippet = originalEmail?.snippet || "";
   const booking = draft.booking || {};
-const guestCount = booking.people ?? extractGuestCountFromText(body) ?? "—";
-const bookingDate = booking.booking_date_iso || extractDateFromText(body) || "—";
-const bookingTime = booking.time || extractTimeFromText(body) || "—";
-const customerName = booking.customer_name || draft.to_email || "—";
+  const sourceText = `${draft.original_email?.snippet || ""} ${body}`;
+
+const guestCount = booking.people ?? extractGuestCountFromText(sourceText) ?? "—";
+const bookingDate = booking.booking_date_iso || extractDateFromText(sourceText) || "—";
+const bookingTime = booking.time || extractTimeFromText(sourceText) || "—";
+const customerName = booking.customer_name || "—";
     extractGuestCountFromText(body) ||
     0;
 
@@ -287,7 +289,7 @@ function copyBooking(id) {
   const guestCount = booking.people ?? extractGuestCountFromText(body) ?? "";
   const bookingDate = booking.booking_date_iso || extractDateFromText(body) || "";
   const bookingTime = booking.time || extractTimeFromText(body) || "";
-  const customerName = booking.customer_name || draft.to_email || "";
+  const customerName = booking.customer_name || "";
 
   const text = isFunction
     ? `

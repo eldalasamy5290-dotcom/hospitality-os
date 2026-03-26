@@ -1134,6 +1134,8 @@ app.get("/drafts", async (req, res) => {
       : null,
   }));
 
+console.log("ENRICHED DRAFTS", enrichedDrafts);
+
   return res.json({ ok: true, data: enrichedDrafts });
 });
 
