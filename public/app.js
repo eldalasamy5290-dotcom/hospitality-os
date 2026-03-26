@@ -244,6 +244,7 @@ async function teachMiaDraft(draftId) {
 
 function copyBooking(id) {
   const draft = window.allDrafts?.find((d) => d.id === id);
+  console.log("COPY DRAFT", draft);
   if (!draft) return;
 
   const booking = draft.booking || {};
