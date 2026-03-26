@@ -36,6 +36,8 @@ async function loadRequests() {
     };
   });
 
+window.allDrafts = draftsWithContext;
+
   const requestsContainer = document.getElementById("requests");
   const upcomingContainer = document.getElementById("upcoming");
   const actionsContainer = document.getElementById("actions");
@@ -101,9 +103,19 @@ function renderDraftCard(draft) {
           : ""
       }
 
-      <div class="request-body">
-        ${body.replace(/\n/g, "<br/>")}
-      </div>
+      ${
+        status === "draft"
+          ? `
+          <div class="request-body">
+            <textarea id="reply-${draft.id}" class="reply-editor">${body}</textarea>
+          </div>
+        `
+          : `
+          <div class="request-body">
+            ${body.replace(/\n/g, "<br/>")}
+          </div>
+        `
+      }
 
       ${
         isFunction
@@ -122,16 +134,70 @@ function renderDraftCard(draft) {
         status === "draft"
           ? `
           <div class="request-actions">
-            <div class="request-actions">
-  <button class="edit-btn" onclick="editDraft('${draft.id}')">Edit</button>
-  <button class="approve-btn" onclick="approve('${draft.id}')">Approve & Send</button>
-</div>
+            <button class="edit-btn" onclick="teachMiaDraft('${draft.id}')">Save & Teach Mia</button>
+            <button class="approve-btn" onclick="approve('${draft.id}')">Approve & Send</button>
           </div>
         `
           : ""
       }
     </div>
   `;
+}
+
+async function teachMiaDraft(draftId) {
+  try {
+    const textarea = document.getElementById(`reply-${draftId}`);
+    if (!textarea) {
+      alert("Reply editor not found");
+      return;
+    }
+
+    const human_edited_reply = textarea.value;
+
+    const draft = window.allDrafts?.find((d) => d.id === draftId);
+    if (!draft) {
+      alert("Draft not found");
+      return;
+    }
+
+    const customer_message =
+      draft.original_email?.snippet ||
+      draft.customer_message ||
+      "";
+
+    const category = draft.body?.toLowerCase().includes("function") ||
+      draft.body?.toLowerCase().includes("set menu") ||
+      draft.body?.toLowerCase().includes("birthday")
+      ? "function"
+      : "booking";
+
+    const res = await fetch("/learn", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        restaurant_id: draft.restaurant_id,
+        category,
+        customer_message,
+        ai_draft: draft.body || "",
+        human_edited_reply,
+      }),
+    });
+
+    const json = await res.json();
+
+    if (!res.ok || !json.ok) {
+      console.error(json);
+      alert("Teach Mia failed");
+      return;
+    }
+
+    alert("Mia learned from your edit ✅");
+  } catch (err) {
+    console.error(err);
+    alert("Teach Mia failed");
+  }
 }
 
 function renderActionCard(action) {
@@ -268,3 +334,4 @@ async function saveDraft(id) {
     alert("Error saving draft");
   }
 }
+

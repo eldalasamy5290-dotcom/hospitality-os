@@ -9,6 +9,10 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+const fs = require("fs");
+const path = require("path");
+
+
 async function markMessageAsRead(messageId, accessToken) {
   await axios.patch(
     `https://graph.microsoft.com/v1.0/me/messages/${messageId}`,
@@ -171,7 +175,13 @@ console.log("LOADED STATE:", JSON.stringify(state, null, 2));
 console.log("CURRENT DELTA LINK EXISTS:", !!state.deltaLink);
 
   console.log("Access token acquired ✅");
-  console.log("CURRENT DELTA LINK EXISTS:", !!state.deltaLink);
+  
+  const cachePath = path.join(__dirname, "../data/token_cache.json");
+fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+fs.writeFileSync(cachePath, pca.getTokenCache().serialize(), "utf-8");
+console.log("✅ Token cache saved to", cachePath);
+ 
+console.log("CURRENT DELTA LINK EXISTS:", !!state.deltaLink);
 
   const isFirstRun = !state.deltaLink;
 

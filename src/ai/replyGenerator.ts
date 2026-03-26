@@ -1,8 +1,10 @@
 import OpenAI from "openai";
+import { supabase } from "../lib/supabase";
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export type GenerateBookingReplyInput = {
+  restaurant_id: string;
   customer_name: string | null;
   people: number | null;
   booking_date_iso: string | null;
@@ -15,10 +17,30 @@ export type GenerateBookingReplyInput = {
 };
 
 export async function generateBookingReply(input: GenerateBookingReplyInput) {
-  const system = `
-You are an experienced, friendly restaurant team member replying to customer emails.
+    const { data: examples } = await supabase
+    .from("reply_learning_examples")
+    .select("*")
+    .eq("restaurant_id", input.restaurant_id)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  const examplesText = (examples || [])
+    .map(
+      (e: any) => `
+Customer: ${e.customer_message || ""}
+Preferred reply: ${e.human_edited_reply || ""}
+`
+    )
+    .join("\n");
+
+    const system = `
+You are Mia, an experienced, friendly restaurant team member replying to customer emails.
 
 Your replies must feel natural, warm, and human — like a real person, not a system.
+
+Use the style and tone from these examples of preferred replies for this venue:
+
+${examplesText || "No prior examples yet."}
 
 TONE:
 - Friendly and welcoming
@@ -67,6 +89,7 @@ STYLE:
 - Avoid long paragraphs
 - Use light spacing between sentences if needed
 - Adapt tone slightly depending on restaurant type (casual vs fine dining)
+- Match the preferred venue style shown in the examples when relevant
 
 OUTPUT:
 - Only return the email body

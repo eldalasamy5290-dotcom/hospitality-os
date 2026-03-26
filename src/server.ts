@@ -15,8 +15,11 @@ import { functionKnowledgeDemo } from "./ai/functionKnowledge";
 import { eligibleMenus, estimateRevenue } from "./ai/functionEngine";
 import { sendMailViaGraph } from "./lib/graphMail";
 import { generateBookingReply } from "./ai/replyGenerator";
+import OpenAI from "openai";
 
 const app = express();
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 app.use(express.static(path.join(process.cwd(), "public")));
 
@@ -264,6 +267,7 @@ if (extract.people) {
     : `INTERNAL EVENT ESTIMATE\nGuests: ${extract.people ?? "unknown"}\nTotal (est): unknown\n\n---\n\n`;
 
 const aiFunctionReply = await generateBookingReply({
+  restaurant_id: p.restaurant_id,
   customer_name: null,
   people: extract.people,
   booking_date_iso: extract.date_hint ?? null,
@@ -548,6 +552,7 @@ if (!knownName) {
 const isFunctionLead = Boolean(final_people && final_people >= 15);
 
 const replyBody = await generateBookingReply({
+  restaurant_id: p.restaurant_id,
   customer_name: knownName,
   people: final_people,
   booking_date_iso: final_booking_date_iso,
@@ -1256,6 +1261,65 @@ app.post("/actions/:id/approve", async (req, res) => {
 });
 
 const PORT = Number(process.env.PORT || 3000);
+
+app.post("/learn", async (req, res) => {
+  const {
+    restaurant_id,
+    category,
+    customer_message,
+    ai_draft,
+    human_edited_reply,
+  } = req.body;
+
+  // opzionale: generiamo un riassunto del cambiamento
+  let learning_notes = null;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      messages: [
+        {
+          role: "system",
+          content:
+            "Summarize in one sentence how the human improved the AI reply.",
+        },
+        {
+          role: "user",
+          content: `
+Original:
+${ai_draft}
+
+Edited:
+${human_edited_reply}
+          `,
+        },
+      ],
+    });
+
+    learning_notes = completion.choices[0].message.content;
+  } catch (e) {
+    console.log("learning summary failed");
+  }
+
+  const { error } = await supabase
+    .from("reply_learning_examples")
+    .insert([
+      {
+        restaurant_id,
+        category,
+        customer_message,
+        ai_draft,
+        human_edited_reply,
+        learning_notes,
+      },
+    ]);
+
+  if (error) {
+    return res.status(500).json({ ok: false, error: error.message });
+  }
+
+  res.json({ ok: true });
+});
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🔥 HospitalityOS running on port ${PORT}`);
