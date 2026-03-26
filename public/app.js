@@ -74,7 +74,7 @@ function renderDraftCard(draft) {
   const originalSubject = originalEmail?.subject || "No subject";
   const originalFrom = originalEmail?.from || "";
   const originalSnippet = originalEmail?.snippet || "";
-
+  const booking = draft.booking || {};
   const guestCount =
     draft.extracted_people ||
     draft.people ||
@@ -94,6 +94,22 @@ function renderDraftCard(draft) {
   const title = isFunction ? "Function Request" : "Booking Request";
   const customer = draft.to_email || "Unknown guest";
   const status = draft.status || "draft";
+
+const bookingDetailsHtml = !isFunction
+  ? `
+    <div class="booking-extract">
+      <div class="extract-title">Booking Details</div>
+      <div>Name: ${booking.customer_name || "—"}</div>
+      <div>Guests: ${booking.people ?? "—"}</div>
+      <div>Date: ${booking.booking_date_iso || "—"}</div>
+      <div>Time: ${booking.time || "—"}</div>
+    </div>
+  `
+  : "";
+
+const copyButtonHtml = !isFunction
+  ? `<button class="edit-btn" onclick="copyBooking('${draft.id}')">Copy Booking</button>`
+  : "";
 
   return `
     <div class="request-card" data-id="${draft.id}">
@@ -119,8 +135,10 @@ function renderDraftCard(draft) {
       }
 
       <div class="request-body" id="body-${draft.id}">
-        ${body.replace(/\n/g, "<br/>")}
-      </div>
+  ${body.replace(/\n/g, "<br/>")}
+</div>
+
+${bookingDetailsHtml}
 
             ${
         isFunction
@@ -139,9 +157,10 @@ function renderDraftCard(draft) {
         status === "draft"
           ? `
           <div class="request-actions" id="actions-${draft.id}">
-            <button class="edit-btn" onclick="editDraft('${draft.id}')">Edit</button>
-            <button class="approve-btn" onclick="approve('${draft.id}')">Send</button>
-          </div>
+  <button class="edit-btn" onclick="editDraft('${draft.id}')">Edit</button>
+  ${copyButtonHtml}
+  <button class="approve-btn" onclick="approve('${draft.id}')">Send</button>
+</div>
         `
           : ""
       }
@@ -221,6 +240,23 @@ async function teachMiaDraft(draftId) {
     console.error(err);
     alert("Teach Mia failed");
   }
+}
+
+function copyBooking(id) {
+  const draft = window.allDrafts?.find((d) => d.id === id);
+  if (!draft) return;
+
+  const booking = draft.booking || {};
+
+  const text = `
+Name: ${booking.customer_name || ""}
+Guests: ${booking.people ?? ""}
+Date: ${booking.booking_date_iso || ""}
+Time: ${booking.time || ""}
+`.trim();
+
+  navigator.clipboard.writeText(text);
+  alert("Booking copied ✅");
 }
 
 function renderActionCard(action) {
@@ -346,6 +382,4 @@ function logout() {
   localStorage.removeItem("mia_restaurant_id");
   localStorage.removeItem("mia_user_email");
   window.location.href = "/login.html";
-}
-
-
+} 

@@ -1095,7 +1095,8 @@ app.get("/drafts", async (req, res) => {
     return res.status(400).json({ ok: false, error: "restaurant_id required" });
   }
 
-  const { data, error } = await supabase
+  // 1. prende i draft
+  const { data: drafts, error } = await supabase
     .from("draft_replies")
     .select("*")
     .eq("restaurant_id", restaurant_id)
@@ -1106,7 +1107,34 @@ app.get("/drafts", async (req, res) => {
     return res.status(500).json({ ok: false, error: error.message });
   }
 
-  return res.json({ ok: true, data: data ?? [] });
+  // 2. raccoglie thread_id
+  const threadIds = (drafts || [])
+    .map((d) => d.thread_id)
+    .filter(Boolean);
+
+  let bookingsByThread: Record<string, any> = {};
+
+  // 3. prende bookings collegati
+  if (threadIds.length) {
+    const { data: bookings } = await supabase
+      .from("bookings")
+      .select("thread_id, customer_name, people, booking_date_iso, time")
+      .in("thread_id", threadIds);
+
+    bookingsByThread = Object.fromEntries(
+      (bookings || []).map((b) => [b.thread_id, b])
+    );
+  }
+
+  // 4. unisce draft + booking
+  const enrichedDrafts = (drafts || []).map((draft) => ({
+    ...draft,
+    booking: draft.thread_id
+      ? bookingsByThread[draft.thread_id] || null
+      : null,
+  }));
+
+  return res.json({ ok: true, data: enrichedDrafts });
 });
 
 

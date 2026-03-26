@@ -271,3 +271,17 @@ button {
   opacity: 0.6;
   margin-top: 4px;
 }
+
+.booking-extract {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #f4f7fb;
+  font-size: 13px;
+  border: 1px solid #e5e7eb;
+}
+
+.extract-title {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
