@@ -202,29 +202,14 @@ button {
 }
 
 .sidebar {
+  width: 220px;
+  background: linear-gradient(180deg, #032a66 0%, #021b44 100%);
+  color: white;
+  padding: 24px 18px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-}
-
-.sidebar-footer {
-  margin-top: 24px;
-}
-
-.logout-btn {
-  width: 100%;
-  padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.05);
-  color: white;
-  cursor: pointer;
-  font: inherit;
-  transition: all 0.2s ease;
-}
-
-.logout-btn:hover {
-  background: rgba(255,255,255,0.1);
+  min-height: 100vh;
 }
 
 .logo {
@@ -235,8 +220,46 @@ button {
 
 .workspace {
   font-size: 12px;
-  opacity: 0.6;
-  margin-bottom: 20px;
+  opacity: 0.65;
+  margin-bottom: 24px;
+}
+
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sidebar nav a {
+  color: rgba(255,255,255,0.9);
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sidebar nav a.active {
+  color: white;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 24px;
+}
+
+.logout-btn {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+  color: white;
+  cursor: pointer;
+  font: inherit;
+  transition: all 0.2s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(255,255,255,0.1);
 }
 
 .page-header {

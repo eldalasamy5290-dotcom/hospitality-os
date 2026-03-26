@@ -75,6 +75,16 @@ function renderDraftCard(draft) {
   const originalFrom = originalEmail?.from || "";
   const originalSnippet = originalEmail?.snippet || "";
 
+  const guestCount =
+    draft.extracted_people ||
+    draft.people ||
+    extractGuestCountFromText(body) ||
+    0;
+
+  const estimatedFood = guestCount * 55;
+  const estimatedDrinks = guestCount * 20;
+  const estimatedRevenue = estimatedFood + estimatedDrinks;
+
   const isFunction =
     lower.includes("set menu") ||
     lower.includes("function") ||
@@ -112,14 +122,14 @@ function renderDraftCard(draft) {
         ${body.replace(/\n/g, "<br/>")}
       </div>
 
-      ${
+            ${
         isFunction
           ? `
           <div class="menu-box">
             <div class="menu-title">Suggested Menus</div>
             <div>• Set Menu A — $55pp</div>
             <div>• Set Menu B — $75pp</div>
-            <div class="revenue">Estimated Revenue: $1,320</div>
+            <div class="revenue">Estimated Revenue: $${estimatedRevenue.toLocaleString()}</div>
           </div>
         `
           : ""
@@ -318,6 +328,18 @@ function editDraft(id) {
     <button class="edit-btn" onclick="teachMiaDraft('${id}')">Save & Teach</button>
     <button class="approve-btn" onclick="approve('${id}')">Approve & Send</button>
   `;
+}
+
+function extractGuestCountFromText(text) {
+  if (!text) return 0;
+
+  const matches = text.match(/\b(\d+)\s*(people|guests|pax)\b/i);
+  if (matches) return Number(matches[1]);
+
+  const alt = text.match(/\bfor\s+(\d+)\b/i);
+  if (alt) return Number(alt[1]);
+
+  return 0;
 }
 
 function logout() {
