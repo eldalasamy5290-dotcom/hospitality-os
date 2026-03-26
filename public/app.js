@@ -75,9 +75,10 @@ function renderDraftCard(draft) {
   const originalFrom = originalEmail?.from || "";
   const originalSnippet = originalEmail?.snippet || "";
   const booking = draft.booking || {};
-  const guestCount =
-    draft.extracted_people ||
-    draft.people ||
+const guestCount = booking.people ?? extractGuestCountFromText(body) ?? "—";
+const bookingDate = booking.booking_date_iso || extractDateFromText(body) || "—";
+const bookingTime = booking.time || extractTimeFromText(body) || "—";
+const customerName = booking.customer_name || draft.to_email || "—";
     extractGuestCountFromText(body) ||
     0;
 
@@ -95,19 +96,17 @@ function renderDraftCard(draft) {
   const customer = draft.to_email || "Unknown guest";
   const status = draft.status || "draft";
 
-const bookingDetailsHtml = !isFunction
-  ? `
-    <div class="booking-extract">
-      <div class="extract-title">Booking Details</div>
-      <div>Name: ${booking.customer_name || "—"}</div>
-      <div>Guests: ${booking.people ?? "—"}</div>
-      <div>Date: ${booking.booking_date_iso || "—"}</div>
-      <div>Time: ${booking.time || "—"}</div>
-    </div>
-  `
-  : "";
+const bookingDetailsHtml = `
+  <div class="booking-extract">
+    <div class="extract-title">${isFunction ? "Function Details" : "Booking Details"}</div>
+    <div>Name: ${customerName}</div>
+    <div>Guests: ${guestCount}</div>
+    <div>Date: ${bookingDate}</div>
+    <div>Time: ${bookingTime}</div>
+  </div>
+`;
 
-const copyButtonHtml = !isFunction
+const copyButtonHtml = `<button class="edit-btn" onclick="copyBooking('${draft.id}')">${isFunction ? "Copy Function" : "Copy Booking"}</button>`;
   ? `<button class="edit-btn" onclick="copyBooking('${draft.id}')">Copy Booking</button>`
   : "";
 
@@ -242,22 +241,73 @@ async function teachMiaDraft(draftId) {
   }
 }
 
+function extractGuestCountFromText(text) {
+  if (!text) return "";
+
+  const matches = text.match(/\b(\d+)\s*(people|guests|pax)\b/i);
+  if (matches) return matches[1];
+
+  const alt = text.match(/\bfor\s+(\d+)\b/i);
+  if (alt) return alt[1];
+
+  return "";
+}
+
+function extractDateFromText(text) {
+  if (!text) return "";
+
+  const iso = text.match(/\b(20\d{2}-\d{2}-\d{2})\b/);
+  if (iso) return iso[1];
+
+  return "";
+}
+
+function extractTimeFromText(text) {
+  if (!text) return "";
+
+  const time = text.match(/\b(\d{1,2}:\d{2})\b/);
+  if (time) return time[1];
+
+  return "";
+}
+
 function copyBooking(id) {
   const draft = window.allDrafts?.find((d) => d.id === id);
   console.log("COPY DRAFT", draft);
   if (!draft) return;
 
   const booking = draft.booking || {};
+  const body = draft.body || "";
 
-  const text = `
-Name: ${booking.customer_name || ""}
-Guests: ${booking.people ?? ""}
-Date: ${booking.booking_date_iso || ""}
-Time: ${booking.time || ""}
+  const isFunction =
+    body.toLowerCase().includes("function") ||
+    body.toLowerCase().includes("set menu") ||
+    body.toLowerCase().includes("birthday") ||
+    body.toLowerCase().includes("guests");
+
+  const guestCount = booking.people ?? extractGuestCountFromText(body) ?? "";
+  const bookingDate = booking.booking_date_iso || extractDateFromText(body) || "";
+  const bookingTime = booking.time || extractTimeFromText(body) || "";
+  const customerName = booking.customer_name || draft.to_email || "";
+
+  const text = isFunction
+    ? `
+Function Lead
+Name: ${customerName}
+Guests: ${guestCount}
+Date: ${bookingDate}
+Time: ${bookingTime}
+Occasion: ${body.toLowerCase().includes("birthday") ? "Birthday" : ""}
+`.trim()
+    : `
+Name: ${customerName}
+Guests: ${guestCount}
+Date: ${bookingDate}
+Time: ${bookingTime}
 `.trim();
 
   navigator.clipboard.writeText(text);
-  alert("Booking copied ✅");
+  alert(isFunction ? "Function details copied ✅" : "Booking copied ✅");
 }
 
 function renderActionCard(action) {
