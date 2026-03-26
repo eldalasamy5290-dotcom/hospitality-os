@@ -103,19 +103,9 @@ function renderDraftCard(draft) {
           : ""
       }
 
-      ${
-        status === "draft"
-          ? `
-          <div class="request-body">
-            <textarea id="reply-${draft.id}" class="reply-editor">${body}</textarea>
-          </div>
-        `
-          : `
-          <div class="request-body">
-            ${body.replace(/\n/g, "<br/>")}
-          </div>
-        `
-      }
+      <div class="request-body" id="body-${draft.id}">
+        ${body.replace(/\n/g, "<br/>")}
+      </div>
 
       ${
         isFunction
@@ -133,8 +123,8 @@ function renderDraftCard(draft) {
       ${
         status === "draft"
           ? `
-          <div class="request-actions">
-            <button class="edit-btn" onclick="teachMiaDraft('${draft.id}')">Save & Teach Mia</button>
+          <div class="request-actions" id="actions-${draft.id}">
+            <button class="edit-btn" onclick="editDraft('${draft.id}')">Edit</button>
             <button class="approve-btn" onclick="approve('${draft.id}')">Approve & Send</button>
           </div>
         `
@@ -165,11 +155,12 @@ async function teachMiaDraft(draftId) {
       draft.customer_message ||
       "";
 
-    const category = draft.body?.toLowerCase().includes("function") ||
+    const category =
+      draft.body?.toLowerCase().includes("function") ||
       draft.body?.toLowerCase().includes("set menu") ||
       draft.body?.toLowerCase().includes("birthday")
-      ? "function"
-      : "booking";
+        ? "function"
+        : "booking";
 
     const res = await fetch("/learn", {
       method: "POST",
@@ -191,6 +182,23 @@ async function teachMiaDraft(draftId) {
       console.error(json);
       alert("Teach Mia failed");
       return;
+    }
+
+    // aggiorna il draft in memoria locale
+    draft.body = human_edited_reply;
+
+    // aggiorna visualizzazione
+    const bodyDiv = document.getElementById(`body-${draftId}`);
+    if (bodyDiv) {
+      bodyDiv.innerHTML = human_edited_reply.replace(/\n/g, "<br/>");
+    }
+
+    const actionsDiv = document.getElementById(`actions-${draftId}`);
+    if (actionsDiv) {
+      actionsDiv.innerHTML = `
+        <button class="edit-btn" onclick="editDraft('${draftId}')">Edit</button>
+        <button class="approve-btn" onclick="approve('${draftId}')">Approve & Send</button>
+      `;
     }
 
     alert("Mia learned from your edit ✅");
@@ -287,51 +295,24 @@ async function approveAction(id) {
 }
 
 function editDraft(id) {
-  const card = document.querySelector(`[data-id="${id}"]`);
-  if (!card) return;
+  const draft = window.allDrafts?.find((d) => d.id === id);
+  if (!draft) return;
 
-  const bodyDiv = card.querySelector(".request-body");
+  const bodyDiv = document.getElementById(`body-${id}`);
   if (!bodyDiv) return;
 
-  const currentText = bodyDiv.innerText;
 
   bodyDiv.innerHTML = `
-    <textarea class="edit-textarea">${currentText}</textarea>
-    <div class="request-actions" style="margin-top:10px;">
-      <button class="approve-btn" onclick="saveDraft('${id}')">Save</button>
-    </div>
+    <textarea id="reply-${id}" class="reply-editor">${draft.body || ""}</textarea>
+  `;
+
+  const actionsDiv = document.getElementById(`actions-${id}`);
+  if (!actionsDiv) return;
+
+  actionsDiv.innerHTML = `
+    <button class="edit-btn" onclick="teachMiaDraft('${id}')">Save & Teach</button>
+    <button class="approve-btn" onclick="approve('${id}')">Approve & Send</button>
   `;
 }
 
-async function saveDraft(id) {
-  const card = document.querySelector(`[data-id="${id}"]`);
-  if (!card) return;
-
-  const textarea = card.querySelector(".edit-textarea");
-  if (!textarea) return;
-
-  const newBody = textarea.value;
-
-  try {
-    const res = await fetch(`/drafts/${id}/update`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ body: newBody }),
-    });
-
-    const json = await res.json();
-
-    if (!json.ok) {
-      alert("Update failed: " + (json.error || "Unknown error"));
-      return;
-    }
-
-    await loadRequests();
-  } catch (err) {
-    console.error("saveDraft error", err);
-    alert("Error saving draft");
-  }
-}
 
