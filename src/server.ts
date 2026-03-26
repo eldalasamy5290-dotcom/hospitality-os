@@ -279,7 +279,7 @@ const aiFunctionReply = await generateBookingReply({
   now_perth_iso,
 });
 
-const finalBody = internalHeader + aiFunctionReply;
+const finalBody = aiFunctionReply;
 
   const { data: savedDraft, error: dErr } = await supabase
     .from("draft_replies")
