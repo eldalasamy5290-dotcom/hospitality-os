@@ -107,8 +107,7 @@ const bookingDetailsHtml = `
 `;
 
 const copyButtonHtml = `<button class="edit-btn" onclick="copyBooking('${draft.id}')">${isFunction ? "Copy Function" : "Copy Booking"}</button>`;
-  ? `<button class="edit-btn" onclick="copyBooking('${draft.id}')">Copy Booking</button>`
-  : "";
+
 
   return `
     <div class="request-card" data-id="${draft.id}">
