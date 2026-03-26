@@ -1117,9 +1117,9 @@ app.get("/drafts", async (req, res) => {
   // 3. prende i bookings collegati
   if (bookingIds.length) {
     const { data: bookings, error: bookingsError } = await supabase
-      .from("bookings")
-      .select("id, customer_name, people, booking_date_iso, time")
-      .in("id", bookingIds);
+  .from("bookings")
+  .select("id, people, booking_date_iso, time")
+  .in("id", bookingIds);
 
     if (bookingsError) {
       return res.status(500).json({ ok: false, error: bookingsError.message });
