@@ -1095,7 +1095,7 @@ app.get("/drafts", async (req, res) => {
     return res.status(400).json({ ok: false, error: "restaurant_id required" });
   }
 
-  // 1. prende i draft
+  
   const { data: drafts, error } = await supabase
     .from("draft_replies")
     .select("*")
@@ -1104,24 +1104,26 @@ app.get("/drafts", async (req, res) => {
     .limit(10);
 
   if (error) {
+    console.error("DRAFTS ERROR 👉", error);
     return res.status(500).json({ ok: false, error: error.message });
   }
 
-  // 2. raccoglie booking_id reali
+
   const bookingIds = (drafts || [])
     .map((d) => d.booking_id)
     .filter(Boolean);
 
   let bookingsById: Record<string, any> = {};
 
-  // 3. prende i bookings collegati
+
   if (bookingIds.length) {
     const { data: bookings, error: bookingsError } = await supabase
-  .from("bookings")
-  .select("id, people, booking_date_iso, time")
-  .in("id", bookingIds);
+      .from("bookings")
+      .select("id, people, booking_date_iso, time")
+      .in("id", bookingIds);
 
     if (bookingsError) {
+      console.error("BOOKINGS ERROR 👉", bookingsError);
       return res.status(500).json({ ok: false, error: bookingsError.message });
     }
 
@@ -1130,15 +1132,13 @@ app.get("/drafts", async (req, res) => {
     );
   }
 
-  // 4. unisce draft + booking
+
   const enrichedDrafts = (drafts || []).map((draft) => ({
     ...draft,
-    booking: draft.booking_id
-      ? bookingsById[draft.booking_id] || null
-      : null,
+    booking: draft.booking_id ? bookingsById[draft.booking_id] || null : null,
   }));
 
-  console.log("ENRICHED DRAFTS 👉", JSON.stringify(enrichedDrafts, null, 2));
+  console.log("ENRICHED DRAFTS COUNT 👉", enrichedDrafts.length);
 
   return res.json({ ok: true, data: enrichedDrafts });
 });
