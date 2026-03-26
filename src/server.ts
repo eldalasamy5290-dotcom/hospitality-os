@@ -1107,34 +1107,38 @@ app.get("/drafts", async (req, res) => {
     return res.status(500).json({ ok: false, error: error.message });
   }
 
-  // 2. raccoglie thread_id
-  const threadIds = (drafts || [])
-    .map((d) => d.thread_id)
+  // 2. raccoglie booking_id reali
+  const bookingIds = (drafts || [])
+    .map((d) => d.booking_id)
     .filter(Boolean);
 
-  let bookingsByThread: Record<string, any> = {};
+  let bookingsById: Record<string, any> = {};
 
-  // 3. prende bookings collegati
-  if (threadIds.length) {
-    const { data: bookings } = await supabase
+  // 3. prende i bookings collegati
+  if (bookingIds.length) {
+    const { data: bookings, error: bookingsError } = await supabase
       .from("bookings")
-      .select("thread_id, customer_name, people, booking_date_iso, time")
-      .in("thread_id", threadIds);
+      .select("id, customer_name, people, booking_date_iso, time")
+      .in("id", bookingIds);
 
-    bookingsByThread = Object.fromEntries(
-      (bookings || []).map((b) => [b.thread_id, b])
+    if (bookingsError) {
+      return res.status(500).json({ ok: false, error: bookingsError.message });
+    }
+
+    bookingsById = Object.fromEntries(
+      (bookings || []).map((b) => [b.id, b])
     );
   }
 
   // 4. unisce draft + booking
   const enrichedDrafts = (drafts || []).map((draft) => ({
     ...draft,
-    booking: draft.thread_id
-      ? bookingsByThread[draft.thread_id] || null
+    booking: draft.booking_id
+      ? bookingsById[draft.booking_id] || null
       : null,
   }));
 
-console.log("ENRICHED DRAFTS", enrichedDrafts);
+  console.log("ENRICHED DRAFTS 👉", JSON.stringify(enrichedDrafts, null, 2));
 
   return res.json({ ok: true, data: enrichedDrafts });
 });
