@@ -130,7 +130,7 @@ function renderDraftCard(draft) {
           ? `
           <div class="request-actions" id="actions-${draft.id}">
             <button class="edit-btn" onclick="editDraft('${draft.id}')">Edit</button>
-            <button class="approve-btn" onclick="approve('${draft.id}')">Approve & Send</button>
+            <button class="approve-btn" onclick="approve('${draft.id}')">Send</button>
           </div>
         `
           : ""
