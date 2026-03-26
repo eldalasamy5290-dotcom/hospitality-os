@@ -285,3 +285,15 @@ button {
   font-weight: 700;
   margin-bottom: 8px;
 }
+
+.logo {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-img {
+  max-width: 120px;
+  height: auto;
+}
