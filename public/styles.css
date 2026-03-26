@@ -200,3 +200,28 @@ button {
   resize: vertical;
   box-sizing: border-box;
 }
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.sidebar-footer {
+  margin-top: 24px;
+}
+
+.logout-btn {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #334155;
+  background: #1e293b;
+  color: white;
+  cursor: pointer;
+  font: inherit;
+}
+
+.logout-btn:hover {
+  background: #334155;
+}

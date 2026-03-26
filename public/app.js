@@ -1,4 +1,9 @@
-const restaurantId = "88727ef0-d7a7-4ae7-9d01-d8f30e820528";
+const restaurantId = localStorage.getItem("mia_restaurant_id");
+
+if (!restaurantId) {
+  window.location.href = "/login.html";
+  throw new Error("No restaurant session found");
+}
 
 let isLoading = false;
 
@@ -313,6 +318,12 @@ function editDraft(id) {
     <button class="edit-btn" onclick="teachMiaDraft('${id}')">Save & Teach</button>
     <button class="approve-btn" onclick="approve('${id}')">Approve & Send</button>
   `;
+}
+
+function logout() {
+  localStorage.removeItem("mia_restaurant_id");
+  localStorage.removeItem("mia_user_email");
+  window.location.href = "/login.html";
 }
 
 
