@@ -297,3 +297,63 @@ button {
   max-width: 120px;
   height: auto;
 }
+
+:root {
+  --bg-main: #0b0b0f;        /* nero premium */
+  --bg-sidebar: #0b0b0f;     /* stesso del main → seamless */
+  --bg-card: #12121a;        /* leggero contrasto */
+  
+  --primary: #2563eb;        /* blu Mia */
+  --primary-glow: #3b82f6;
+
+  --text-main: #ffffff;
+  --text-secondary: #a1a1aa;
+
+  --border: #1f1f2b;
+}
+
+.sidebar {
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+}
+
+.sidebar a.active {
+  color: white;
+  background: rgba(37, 99, 235, 0.1);
+  border-left: 2px solid var(--primary);
+}
+
+.logo {
+  background: #0b0b0f;
+  color: white;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.logo-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--primary);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.card:hover {
+  border-color: var(--primary);
+}
+
+.button-primary {
+  background: var(--primary);
+  color: white;
+  border-radius: 8px;
+}
+
+.button-primary:hover {
+  background: var(--primary-glow);
+}
