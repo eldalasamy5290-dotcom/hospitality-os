@@ -42,19 +42,12 @@ body {
 }
 
 .logo {
-  
-  display: flex;
-  align-items: center;
+  display: flex; 
   justify-content: center;
-  gap: 6px;
-  font-size: 24px;
-  font-weight: 600;
-  color: white;
-  letter-spacing: 1px;
-
-  /* questo cambia tutto */
-  text-shadow: 0 0 6px rgba(255,255,255,0.15);
+  align-items: center;
+  padding: 10px 0 16px;
 }
+
 
 .logo-dot {
   width: 7px;
