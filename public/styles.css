@@ -324,7 +324,7 @@ button {
 }
 
 .logo {
-  background: #0b0b0f;
+  background: transparent;
   color: white;
   font-weight: 600;
   letter-spacing: 1px;
@@ -356,4 +356,29 @@ button {
 
 .button-primary:hover {
   background: var(--primary-glow);
+}
+
+.logo {
+  padding: 20px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-dot {
+  width: 6px;
+  height: 6px;
+  background: #3b82f6;
+  border-radius: 50%;
+  box-shadow: 0 0 12px #3b82f6;
+}
+
+.logo-dot {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 6px #3b82f6; }
+  50% { box-shadow: 0 0 14px #3b82f6; }
+  100% { box-shadow: 0 0 6px #3b82f6; }
 }
