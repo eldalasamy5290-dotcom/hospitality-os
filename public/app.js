@@ -64,6 +64,7 @@ window.allDrafts = draftsWithContext;
     <div class="upcoming-item">Sat 24 guests — Birthday Function</div>
     <div class="upcoming-item">Sun 12:30 — 6 guests</div>
   `;
+  updateMiaStatus();
 }
 
 function renderDraftCard(draft) {
@@ -430,23 +431,38 @@ function extractGuestCountFromText(text) {
   return 0;
 }
 
-const messages = [
-  "Mia is processing bookings...",
-  "Mia is confirming a reservation...",
-  "Mia is checking availability...",
-  "Mia handled 2 bookings today",
-  "Mia is preparing a reply...",
-];
 
-let i = 0;
+function updateMiaStatus() {
+  const statusEl = document.getElementById("mia-text");
+  if (!statusEl) return;
 
-setInterval(() => {
-  i = (i + 1) % messages.length;
-  const el = document.getElementById("mia-text");
-  if (el) {
-    el.innerText = messages[i];
+  const requestCards = document.querySelectorAll(".request-card");
+  const draftBadges = document.querySelectorAll(".badge-draft");
+  const sentBadges = document.querySelectorAll(".badge-sent");
+  const actionCards = document.querySelectorAll(".action-card");
+
+  if (draftBadges.length > 0) {
+    statusEl.innerText = `${draftBadges.length} draft repl${draftBadges.length === 1 ? "y" : "ies"} ready`;
+    return;
   }
-}, 4000);
+
+  if (requestCards.length > 0) {
+    statusEl.innerText = `${requestCards.length} new request${requestCards.length === 1 ? "" : "s"} need review`;
+    return;
+  }
+
+  if (actionCards.length > 0) {
+    statusEl.innerText = `${actionCards.length} pending action${actionCards.length === 1 ? "" : "s"}`;
+    return;
+  }
+
+  if (sentBadges.length > 0) {
+    statusEl.innerText = `${sentBadges.length} repl${sentBadges.length === 1 ? "y" : "ies"} sent`;
+    return;
+  }
+
+  statusEl.innerText = "Mia is online";
+}
 
 function logout() {
   localStorage.removeItem("mia_restaurant_id");

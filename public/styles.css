@@ -348,36 +348,28 @@ button:active,
   display: flex;
   align-items: center;
   gap: 10px;
-
-  background: rgba(59,130,246,0.08);
-  border: 1px solid rgba(59,130,246,0.2);
-
+  background: rgba(59,130,246,0.06);
+  border: 1px solid rgba(59,130,246,0.16);
   padding: 10px 14px;
-  border-radius: 10px;
-
+  border-radius: 10px; 
   font-size: 14px;
   font-weight: 500;
-
-  color: #1e3a8a;
-
+  color: #24406a;
   margin-bottom: 20px;
 }
-
-/* DOT */
+ 
 .mia-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #3b82f6;
-
-  box-shadow: 0 0 10px #3b82f6;
-
+  background: #3b82f6; 
+  box-shadow: 0 0 10px #3b82f6; 
   animation: pulse 1.8s infinite;
 }
 
 @keyframes pulse {
-  0%   { box-shadow: 0 0 6px #3b82f6; }
-  50%  { box-shadow: 0 0 14px #3b82f6; }
+  0% { box-shadow: 0 0 6px #3b82f6; }
+  50% { box-shadow: 0 0 12px #3b82f6; }
   100% { box-shadow: 0 0 6px #3b82f6; }
 }
 
