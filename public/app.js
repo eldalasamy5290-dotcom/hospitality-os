@@ -64,7 +64,10 @@ window.allDrafts = draftsWithContext;
     <div class="upcoming-item">Sat 24 guests — Birthday Function</div>
     <div class="upcoming-item">Sun 12:30 — 6 guests</div>
   `;
-  updateMiaStatus();
+  updateMiaStatus({
+  drafts: draftsWithContext,
+  actions: actions
+});
 }
 
 function renderDraftCard(draft) {
@@ -432,36 +435,39 @@ function extractGuestCountFromText(text) {
 }
 
 
-function updateMiaStatus() {
+function updateMiaStatus({ drafts = [], actions = [] } = {}) {
   const statusEl = document.getElementById("mia-text");
+  const dotEl = document.querySelector(".mia-dot");
   if (!statusEl) return;
 
-  const requestCards = document.querySelectorAll(".request-card");
-  const draftBadges = document.querySelectorAll(".badge-draft");
-  const sentBadges = document.querySelectorAll(".badge-sent");
-  const actionCards = document.querySelectorAll(".action-card");
+  const draftCount = drafts.filter((d) => (d.status || "draft") === "draft").length;
+  const sentCount = drafts.filter((d) => d.status === "sent").length;
+  const actionCount = actions.length;
 
-  if (draftBadges.length > 0) {
-    statusEl.innerText = `${draftBadges.length} draft repl${draftBadges.length === 1 ? "y" : "ies"} ready`;
+  if (dotEl) {
+    dotEl.classList.remove("is-live", "is-busy", "is-idle");
+  }
+
+  if (draftCount > 0) {
+    statusEl.innerText = `${draftCount} draft repl${draftCount === 1 ? "y" : "ies"} ready`;
+    if (dotEl) dotEl.classList.add("is-busy");
     return;
   }
 
-  if (requestCards.length > 0) {
-    statusEl.innerText = `${requestCards.length} new request${requestCards.length === 1 ? "" : "s"} need review`;
+  if (actionCount > 0) {
+    statusEl.innerText = `${actionCount} pending action${actionCount === 1 ? "" : "s"}`;
+    if (dotEl) dotEl.classList.add("is-busy");
     return;
   }
 
-  if (actionCards.length > 0) {
-    statusEl.innerText = `${actionCards.length} pending action${actionCards.length === 1 ? "" : "s"}`;
-    return;
-  }
-
-  if (sentBadges.length > 0) {
-    statusEl.innerText = `${sentBadges.length} repl${sentBadges.length === 1 ? "y" : "ies"} sent`;
+  if (sentCount > 0) {
+    statusEl.innerText = `${sentCount} repl${sentCount === 1 ? "y" : "ies"} sent`;
+    if (dotEl) dotEl.classList.add("is-live");
     return;
   }
 
   statusEl.innerText = "Mia is online";
+  if (dotEl) dotEl.classList.add("is-idle");
 }
 
 function logout() {

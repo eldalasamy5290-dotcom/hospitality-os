@@ -378,3 +378,18 @@ button:active,
   border-color: rgba(34,197,94,0.3);
 }
 
+.mia-dot.is-busy {
+  background: #3b82f6;
+  box-shadow: 0 0 12px #3b82f6;
+}
+
+.mia-dot.is-live {
+  background: #22c55e;
+  box-shadow: 0 0 12px #22c55e;
+}
+
+.mia-dot.is-idle {
+  background: #94a3b8;
+  box-shadow: none;
+}
+
