@@ -47,26 +47,29 @@ body {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 600;
   color: white;
   letter-spacing: 1px;
+
+  /* questo cambia tutto */
+  text-shadow: 0 0 6px rgba(255,255,255,0.15);
 }
 
 .logo-dot {
-  width: 6px;
-  height: 6px;
-  background: #3b82f6;
+  width: 7px;
+  height: 7px;
+  background: radial-gradient(circle, #60a5fa 0%, #2563eb 60%, #1e3a8a 100%);
   border-radius: 50%;
-  position: relative;
-  box-shadow: 0 0 10px #3b82f6;
-  animation: pulse 2s infinite;
+
+  box-shadow: 0 0 12px #3b82f6, 0 0 24px rgba(59,130,246,0.4);
+  animation: pulse 2s infinite ease-in-out;
 }
 
 @keyframes pulse {
-  0%   { box-shadow: 0 0 6px #3b82f6; }
-  50%  { box-shadow: 0 0 14px #3b82f6; }
-  100% { box-shadow: 0 0 6px #3b82f6; }
+  0%   { transform: scale(1); box-shadow: 0 0 8px #3b82f6; }
+  50%  { transform: scale(1.2); box-shadow: 0 0 18px #3b82f6; }
+  100% { transform: scale(1); box-shadow: 0 0 8px #3b82f6; }
 }
 
 .workspace {
