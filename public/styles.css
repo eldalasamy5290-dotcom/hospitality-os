@@ -344,3 +344,45 @@ button:active,
   box-sizing: border-box;
 }
 
+.mia-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  background: rgba(59,130,246,0.08);
+  border: 1px solid rgba(59,130,246,0.2);
+
+  padding: 10px 14px;
+  border-radius: 10px;
+
+  font-size: 14px;
+  font-weight: 500;
+
+  color: #1e3a8a;
+
+  margin-bottom: 20px;
+}
+
+/* DOT */
+.mia-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3b82f6;
+
+  box-shadow: 0 0 10px #3b82f6;
+
+  animation: pulse 1.8s infinite;
+}
+
+@keyframes pulse {
+  0%   { box-shadow: 0 0 6px #3b82f6; }
+  50%  { box-shadow: 0 0 14px #3b82f6; }
+  100% { box-shadow: 0 0 6px #3b82f6; }
+}
+
+.mia-status.active {
+  background: rgba(34,197,94,0.1);
+  border-color: rgba(34,197,94,0.3);
+}
+

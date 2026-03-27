@@ -430,6 +430,24 @@ function extractGuestCountFromText(text) {
   return 0;
 }
 
+const messages = [
+  "Mia is processing bookings...",
+  "Mia is confirming a reservation...",
+  "Mia is checking availability...",
+  "Mia handled 2 bookings today",
+  "Mia is preparing a reply...",
+];
+
+let i = 0;
+
+setInterval(() => {
+  i = (i + 1) % messages.length;
+  const el = document.getElementById("mia-text");
+  if (el) {
+    el.innerText = messages[i];
+  }
+}, 4000);
+
 function logout() {
   localStorage.removeItem("mia_restaurant_id");
   localStorage.removeItem("mia_user_email");
