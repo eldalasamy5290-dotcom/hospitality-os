@@ -15,12 +15,12 @@
 </div>
 <div class="workspace">Demo Venue</div>
     <nav>
-      <a class="active">Dashboard</a>
-      <a>Inbox</a>
-      <a>Upcoming</a>
-      <a>Functions</a>
-      <a>Feedback</a>
-    </nav>
+  <a href="#" class="active" onclick="setPage('dashboard', this); return false;">Dashboard</a>
+  <a href="#" onclick="setPage('inbox', this); return false;">Inbox</a>
+  <a href="#" onclick="setPage('upcoming', this); return false;">Upcoming</a>
+  <a href="#" onclick="setPage('functions', this); return false;">Functions</a>
+  <a href="#" onclick="setPage('feedback', this); return false;">Feedback</a>
+</nav>
 
     <div class="sidebar-footer">
   <button class="logout-btn" onclick="logout()">Logout</button>

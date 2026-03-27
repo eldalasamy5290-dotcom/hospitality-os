@@ -1,4 +1,5 @@
 const restaurantId = localStorage.getItem("mia_restaurant_id");
+let currentPage = "dashboard";
 
 if (!restaurantId) {
   window.location.href = "/login.html";
@@ -6,6 +7,8 @@ if (!restaurantId) {
 }
 
 let isLoading = false;
+
+
 
 console.log("APP JS LOADED 🔥");
 
@@ -468,6 +471,23 @@ function updateMiaStatus({ drafts = [], actions = [] } = {}) {
 
   statusEl.innerText = "Mia is online";
   if (dotEl) dotEl.classList.add("is-idle");
+}
+
+function setPage(page, el) {
+  currentPage = page;
+
+  // rimuove active da tutti i link
+  document.querySelectorAll(".sidebar nav a").forEach((link) => {
+    link.classList.remove("active");
+  });
+
+  // aggiunge active al link cliccato
+  if (el) {
+    el.classList.add("active");
+  }
+
+  // ricarica i dati
+  loadRequests();
 }
 
 function logout() {
