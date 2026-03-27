@@ -49,12 +49,22 @@ window.allDrafts = draftsWithContext;
   const requestsContainer = document.getElementById("requests");
   const upcomingContainer = document.getElementById("upcoming");
   const actionsContainer = document.getElementById("actions");
+  const pageTitle = document.getElementById("page-title");
 
-  if (!draftsWithContext.length) {
-    requestsContainer.innerHTML = "<p>No new requests.</p>";
-  } else {
-    requestsContainer.innerHTML = draftsWithContext.slice(0, 5).map(renderDraftCard).join("");
-  }
+if (pageTitle) {
+  pageTitle.innerText = currentPage === "inbox" ? "Inbox" : "Dashboard";
+}
+
+  const visibleDrafts =
+  currentPage === "inbox"
+    ? draftsWithContext
+    : draftsWithContext.slice(0, 5);
+
+if (!draftsWithContext.length) {
+  requestsContainer.innerHTML = "<p>No new requests.</p>";
+} else {
+  requestsContainer.innerHTML = visibleDrafts.map(renderDraftCard).join("");
+}
 
   if (!actions.length) {
     actionsContainer.innerHTML = "<p>No pending actions.</p>";
