@@ -45,11 +45,11 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 10px 0 16px;
+  padding: 16px 0 24px;
 }
 
 .logo-img {
-  max-width: 110px;
+  max-width: 140px;
   height: auto;
   display: block;
 }
