@@ -53,9 +53,30 @@ async function loadRequests() {
 
 window.allDrafts = draftsWithContext;
 
+const threshold = window.functionGuestThreshold || 10;
+
+const upcomingRelevantDrafts = draftsWithContext.filter((draft) => {
+  const booking = draft.booking || {};
+  const sourceText = `${draft.original_email?.snippet || ""} ${draft.body || ""}`.toLowerCase();
+
+  const isFunction =
+    (booking.people && booking.people >= threshold) ||
+    sourceText.includes("set menu") ||
+    sourceText.includes("function") ||
+    sourceText.includes("birthday");
+
+  const hasNotes = !!(booking.notes && booking.notes.trim());
+
+  return isFunction || hasNotes;
+});
+
   const requestsContainer = document.getElementById("requests");
   const upcomingContainer = document.getElementById("upcoming");
   const actionsContainer = document.getElementById("actions");
+  const requestsTitle = document.getElementById("requests-title");
+if (requestsTitle) {
+  requestsTitle.innerText = `New Requests (${draftsWithContext.length})`;
+}
   const pageTitle = document.getElementById("page-title");
 
 if (pageTitle) {
@@ -65,7 +86,7 @@ if (pageTitle) {
   const visibleDrafts =
   currentPage === "inbox"
     ? draftsWithContext
-    : draftsWithContext.slice(0, 5);
+    : draftsWithContext.slice(0, 1);
 
 if (!draftsWithContext.length) {
   requestsContainer.innerHTML = "<p>No new requests.</p>";
@@ -79,11 +100,15 @@ if (!draftsWithContext.length) {
     actionsContainer.innerHTML = actions.slice(0, 5).map(renderActionCard).join("");
   }
 
-  upcomingContainer.innerHTML = `
-    <div class="upcoming-item">Fri 19:00 — 2 guests</div>
-    <div class="upcoming-item">Sat 24 guests — Birthday Function</div>
-    <div class="upcoming-item">Sun 12:30 — 6 guests</div>
-  `;
+  if (!upcomingRelevantDrafts.length) {
+  upcomingContainer.innerHTML = "<p>No upcoming reminders.</p>";
+} else {
+  upcomingContainer.innerHTML = upcomingRelevantDrafts
+    .slice(0, 5)
+    .map(renderUpcomingItem)
+    .join("");
+}
+
   updateMiaStatus({
   drafts: draftsWithContext,
   actions: actions
@@ -802,6 +827,50 @@ function saveFunctionMenus() {
 function cancelFunctionMenus() {
   window.functionMenusDraft = JSON.parse(JSON.stringify(window.functionMenus || []));
   renderFunctionsPage();
+}
+
+function renderUpcomingItem(draft) {
+  const booking = draft.booking || {};
+  const guests = booking.people || "—";
+  const date = booking.booking_date_iso || "—";
+  const time = booking.time || "—";
+  const notes = booking.notes || "";
+
+  const sourceText = `${draft.original_email?.snippet || ""} ${draft.body || ""}`.toLowerCase();
+  const threshold = window.functionGuestThreshold || 10;
+
+  const isFunction =
+    (booking.people && booking.people >= threshold) ||
+    sourceText.includes("set menu") ||
+    sourceText.includes("function") ||
+    sourceText.includes("birthday");
+
+  const title = isFunction ? "Function Booking" : "Booking Reminder";
+  const reason = notes || (isFunction ? "Needs function follow-up" : "Needs attention");
+
+  return `
+    <div class="upcoming-card">
+      <div class="upcoming-card-header">
+        <div class="upcoming-card-title">${title}</div>
+        <div class="upcoming-card-time">${date} ${time}</div>
+      </div>
+
+      <div class="upcoming-card-meta">${guests} guests</div>
+      <div class="upcoming-card-note">${reason}</div>
+
+      ${
+        isFunction
+          ? `<div class="upcoming-card-actions">
+               <button class="approve-btn" onclick="printRunsheet('${draft.id}')">Print Runsheet</button>
+             </div>`
+          : ""
+      }
+    </div>
+  `;
+}
+
+function printRunsheet(draftId) {
+  alert(`Runsheet printing coming next for draft ${draftId}`);
 }
 
 function logout() {
