@@ -53,6 +53,10 @@ async function loadRequests() {
 
 window.allDrafts = draftsWithContext;
 
+const activeDrafts = draftsWithContext.filter(
+  (draft) => (draft.status || "draft") === "draft"
+);
+
 const threshold = window.functionGuestThreshold || 10;
 
 const upcomingRelevantDrafts = draftsWithContext.filter((draft) => {
@@ -74,8 +78,9 @@ const upcomingRelevantDrafts = draftsWithContext.filter((draft) => {
   const upcomingContainer = document.getElementById("upcoming");
   const actionsContainer = document.getElementById("actions");
   const requestsTitle = document.getElementById("requests-title");
+
 if (requestsTitle) {
-  requestsTitle.innerText = `New Requests (${draftsWithContext.length})`;
+  requestsTitle.innerText = `New Requests (${activeDrafts.length})`;
 }
 
 const count = draftsWithContext.length;
@@ -93,10 +98,10 @@ if (pageTitle) {
 
   const visibleDrafts =
   currentPage === "inbox"
-    ? draftsWithContext
-    : draftsWithContext.slice(0, 1);
+    ? activeDrafts
+    : activeDrafts.slice(0, 1);
 
-if (!draftsWithContext.length) {
+if (!activeDrafts.length) {
   requestsContainer.innerHTML = "<p>No new requests.</p>";
 } else {
   requestsContainer.innerHTML = visibleDrafts.map(renderDraftCard).join("");
