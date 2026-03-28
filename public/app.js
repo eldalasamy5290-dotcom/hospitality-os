@@ -628,16 +628,37 @@ function updateFunctionThreshold() {
 
 function renderFunctionsPage() {
   const dashboardPage = document.getElementById("dashboard-page");
-  const functionsPage = document.getElementById("functions-page"); 
-
-  if (dashboardPage) dashboardPage.style.display = "none";
+  const functionsPage = document.getElementById("functions-page");
   if (!functionsPage) return;
 
-  functionsPage.style.display = "block"; 
+  if (dashboardPage) dashboardPage.style.display = "none";
+  functionsPage.style.display = "block";
+
+  const threshold = window.functionGuestThreshold || 10;
+
   functionsPage.innerHTML = `
-    <div style="padding: 20px; color: black; background: white;">
+    <div class="page-header">
       <h1>Functions</h1>
-      <p>Functions page test</p>
+      <div class="subtitle">Manage function rules and set menu logic</div>
+    </div>
+
+    <div class="panel">
+      <h2>Function Settings</h2>
+
+      <div class="edit-row" style="max-width: 260px; margin-top: 16px;">
+        <label for="function-threshold-input">Function threshold</label>
+        <input
+          type="number"
+          id="function-threshold-input"
+          value="${threshold}"
+          min="1"
+          onchange="updateFunctionThreshold()"
+        />
+      </div>
+
+      <p style="margin-top: 12px; color: #6b7280;">
+        Requests with guests equal to or above this number will be treated as function enquiries.
+      </p>
     </div>
   `;
 }
