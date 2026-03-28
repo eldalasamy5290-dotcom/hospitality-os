@@ -77,6 +77,14 @@ const upcomingRelevantDrafts = draftsWithContext.filter((draft) => {
 if (requestsTitle) {
   requestsTitle.innerText = `New Requests (${draftsWithContext.length})`;
 }
+
+const count = draftsWithContext.length;
+
+requestsTitle.innerText =
+  count === 0
+    ? "New Requests"
+    : `New Requests (${count})`;
+
   const pageTitle = document.getElementById("page-title");
 
 if (pageTitle) {
