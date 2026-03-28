@@ -503,19 +503,25 @@ function updateMiaStatus({ drafts = [], actions = [] } = {}) {
 
 function setPage(page, el) {
   currentPage = page;
- 
+
   document.querySelectorAll(".sidebar nav a").forEach((link) => {
     link.classList.remove("active");
   });
- 
+
   if (el) {
     el.classList.add("active");
   }
+
+  const dashboardPage = document.getElementById("dashboard-page");
+  const functionsPage = document.getElementById("functions-page");
 
   if (page === "functions") {
     renderFunctionsPage();
     return;
   }
+
+  if (functionsPage) functionsPage.style.display = "none";
+  if (dashboardPage) dashboardPage.style.display = "block";
 
   loadRequests();
 }
@@ -621,12 +627,16 @@ function updateFunctionThreshold() {
 }
 
 function renderFunctionsPage() {
-  const mainContent = document.getElementById("main-content");
-  if (!mainContent) return;
+  const dashboardPage = document.getElementById("dashboard-page");
+  const functionsPage = document.getElementById("functions-page");
+  if (!functionsPage) return;
+
+  if (dashboardPage) dashboardPage.style.display = "none";
+  functionsPage.style.display = "block";
 
   const threshold = window.functionGuestThreshold || 10;
 
-  mainContent.innerHTML = `
+  functionsPage.innerHTML = `
     <div class="page-header">
       <h1 id="page-title">Functions</h1>
       <div class="subtitle">Manage function rules and set menu logic</div>
