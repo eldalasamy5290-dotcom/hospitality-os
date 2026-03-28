@@ -108,9 +108,12 @@ const customerName = booking.customer_name || "—";
     extractGuestCountFromText(body) ||
     0;
 
-  const estimatedFood = guestCount * 55;
-  const estimatedDrinks = guestCount * 20;
-  const estimatedRevenue = estimatedFood + estimatedDrinks;
+  const availableMenus = window.functionMenus || [];
+const selectedMenu = availableMenus[0] || null;
+
+const estimatedFood = selectedMenu ? guestCount * Number(selectedMenu.price || 0) : 0;
+const estimatedDrinks = guestCount * 20;
+const estimatedRevenue = estimatedFood + estimatedDrinks;
 
   const threshold = window.functionGuestThreshold || 10;
 window.functionMenus = window.functionMenus || [
@@ -190,17 +193,24 @@ const copyButtonHtml = `<button class="edit-btn" onclick="copyBooking('${draft.i
 ${bookingDetailsHtml}
 
             ${
-        isFunction
-          ? `
-          <div class="menu-box">
-            <div class="menu-title">Suggested Menus</div>
-            <div>• Set Menu A — $55pp</div>
-            <div>• Set Menu B — $75pp</div>
-            <div class="revenue">Estimated Revenue: $${estimatedRevenue.toLocaleString()}</div>
-          </div>
-        `
-          : ""
-      }
+  isFunction
+    ? `
+      <div class="menu-box">
+        <div class="menu-title">Suggested Menus</div>
+        ${
+          availableMenus.length
+            ? availableMenus.map(menu => `
+              <div>• ${menu.name} — $${Number(menu.price || 0)}pp</div>
+            `).join("")
+            : `<div>No set menus configured yet.</div>`
+        }
+        <div class="revenue">
+          Estimated Revenue: $${estimatedRevenue.toLocaleString()}
+        </div>
+      </div>
+    `
+    : ""
+}
 
       ${
         status === "draft"
