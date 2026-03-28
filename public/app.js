@@ -113,6 +113,20 @@ const customerName = booking.customer_name || "—";
   const estimatedRevenue = estimatedFood + estimatedDrinks;
 
   const threshold = window.functionGuestThreshold || 10;
+window.functionMenus = window.functionMenus || [
+  {
+    id: "menu_a",
+    name: "Set Menu A",
+    price: 55,
+    description: "Shared starters + pizza + dessert"
+  },
+  {
+    id: "menu_b",
+    name: "Set Menu B",
+    price: 75,
+    description: "Premium selection + mains + dessert"
+  }
+];
 
 const isFunction =
   (guestCount && guestCount >= threshold) ||
@@ -637,30 +651,74 @@ function renderFunctionsPage() {
   const threshold = window.functionGuestThreshold || 10;
 
   functionsPage.innerHTML = `
-    <div class="page-header">
-      <h1>Functions</h1>
-      <div class="subtitle">Manage function rules and set menu logic</div>
+  <div class="page-header">
+    <h1>Functions</h1>
+    <div class="subtitle">Manage function rules and set menu logic</div>
+  </div>
+
+  <div class="panel">
+    <h2>Function Settings</h2>
+
+    <div class="edit-row" style="max-width: 260px; margin-top: 16px;">
+      <label>Function threshold</label>
+      <input
+        type="number"
+        id="function-threshold-input"
+        value="${threshold}"
+        min="1"
+        onchange="updateFunctionThreshold()"
+      />
     </div>
+  </div>
 
-    <div class="panel">
-      <h2>Function Settings</h2>
+  <div class="panel">
+    <h2>Set Menus</h2>
 
-      <div class="edit-row" style="max-width: 260px; margin-top: 16px;">
-        <label for="function-threshold-input">Function threshold</label>
-        <input
-          type="number"
-          id="function-threshold-input"
-          value="${threshold}"
-          min="1"
-          onchange="updateFunctionThreshold()"
-        />
+    ${window.functionMenus.map(menu => `
+      <div class="menu-edit-card">
+        <div class="edit-row">
+          <label>Name</label>
+          <input type="text" value="${menu.name}" onchange="updateMenu('${menu.id}', 'name', this.value)" />
+        </div>
+
+        <div class="edit-row">
+          <label>Price per person ($)</label>
+          <input type="number" value="${menu.price}" onchange="updateMenu('${menu.id}', 'price', this.value)" />
+        </div>
+
+        <div class="edit-row">
+          <label>Description</label>
+          <textarea onchange="updateMenu('${menu.id}', 'description', this.value)">${menu.description}</textarea>
+        </div>
       </div>
+    `).join("")}
 
-      <p style="margin-top: 12px; color: #6b7280;">
-        Requests with guests equal to or above this number will be treated as function enquiries.
-      </p>
-    </div>
-  `;
+    <button class="approve-btn" onclick="addNewMenu()">+ Add Menu</button>
+  </div>
+`;
+}
+
+function updateMenu(menuId, field, value) {
+  const menu = window.functionMenus.find(m => m.id === menuId);
+  if (!menu) return;
+
+  if (field === "price") {
+    menu[field] = Number(value);
+  } else {
+    menu[field] = value;
+  }
+}
+
+function addNewMenu() {
+  const newMenu = {
+    id: "menu_" + Date.now(),
+    name: "New Menu",
+    price: 60,
+    description: ""
+  };
+
+  window.functionMenus.push(newMenu);
+  renderFunctionsPage();
 }
 
 function logout() {

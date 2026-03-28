@@ -438,3 +438,11 @@ button:active,
   gap: 10px;
   margin-top: 6px;
 }
+
+.menu-edit-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
+  background: #fff;
+}
