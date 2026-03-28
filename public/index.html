@@ -21,7 +21,16 @@
   <a href="#" onclick="setPage('functions', this); return false;">Functions</a>
   <a href="#" onclick="setPage('feedback', this); return false;">Feedback</a>
 </nav>
-
+<div style="margin-top: 10px;">
+  <label style="font-size: 12px; opacity: 0.6;">Function threshold</label>
+  <input 
+    type="number" 
+    id="function-threshold-input" 
+    value="10"
+    style="width: 100%; margin-top: 4px; padding: 6px; border-radius: 6px; border: 1px solid #333;"
+    onchange="updateFunctionThreshold()"
+  />
+</div>
     <div class="sidebar-footer">
   <button class="logout-btn" onclick="logout()">Logout</button>
 </div>

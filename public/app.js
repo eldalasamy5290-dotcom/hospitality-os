@@ -112,11 +112,13 @@ const customerName = booking.customer_name || "—";
   const estimatedDrinks = guestCount * 20;
   const estimatedRevenue = estimatedFood + estimatedDrinks;
 
-  const isFunction =
-    lower.includes("set menu") ||
-    lower.includes("function") ||
-    lower.includes("birthday") ||
-    lower.includes("guests");
+  const threshold = window.functionGuestThreshold || 10;
+
+const isFunction =
+  (guestCount && guestCount >= threshold) ||
+  lower.includes("set menu") ||
+  lower.includes("function") ||
+  lower.includes("birthday");
 
   const title = isFunction ? "Function Request" : "Booking Request";
   const customer = draft.to_email || "Unknown guest";
@@ -597,6 +599,18 @@ function escapeHtml(value) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function updateFunctionThreshold() {
+  const input = document.getElementById("function-threshold-input");
+  if (!input) return;
+
+  const value = Number(input.value);
+  if (!value || value < 1) return;
+
+  window.functionGuestThreshold = value;
+
+  loadRequests();
 }
 
 function logout() {
