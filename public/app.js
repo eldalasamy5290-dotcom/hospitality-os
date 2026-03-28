@@ -119,7 +119,12 @@ const bookingDetailsHtml = `
   <div class="booking-extract">
     <div class="extract-title">${isFunction ? "Function Details" : "Booking Details"}</div>
     <div>Name: ${customerName}</div>
-    <div>Guests: ${guestCount}</div>
+    <div>
+  Guests: <span id="guest-count-${draft.id}">${guestCount}</span>
+</div>
+<div id="guest-actions-${draft.id}" class="guest-actions">
+  <button class="edit-btn" onclick="enableGuestEdit('${draft.id}')">Edit Guests</button>
+</div>
     <div>Date: ${bookingDate}</div>
     <div>Time: ${bookingTime}</div>
   </div>
@@ -497,6 +502,44 @@ function setPage(page, el) {
   }
 
   // ricarica i dati
+  loadRequests();
+}
+
+function enableGuestEdit(draftId) {
+  const valueEl = document.getElementById(`guest-count-${draftId}`);
+  const actionsEl = document.getElementById(`guest-actions-${draftId}`);
+
+  if (!valueEl || !actionsEl) return;
+
+  const currentValue = valueEl.innerText.trim() === "—" ? "" : valueEl.innerText.trim();
+
+  valueEl.innerHTML = `
+    <input
+      id="guest-input-${draftId}"
+      type="number"
+      min="1"
+      value="${currentValue}"
+      class="guest-input"
+    />
+  `;
+
+  actionsEl.innerHTML = `
+    <button class="edit-btn" onclick="saveGuestCount('${draftId}')">Save</button>
+    <button class="edit-btn" onclick="loadRequests()">Cancel</button>
+  `;
+}
+
+function saveGuestCount(draftId) {
+  const inputEl = document.getElementById(`guest-input-${draftId}`);
+  if (!inputEl) return;
+
+  const newValue = inputEl.value.trim();
+  const draft = (window.allDrafts || []).find((d) => d.id === draftId);
+  if (!draft) return;
+
+  if (!draft.booking) draft.booking = {};
+  draft.booking.people = newValue ? Number(newValue) : null;
+
   loadRequests();
 }
 
