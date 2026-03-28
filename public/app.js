@@ -36,19 +36,24 @@ async function loadRequests() {
   const manualOverride = window.manualBookingOverrides?.[draft.id] || {};
 
   return {
-    ...draft,
-    booking: {
-      ...(draft.booking || {}),
-      ...manualOverride,
-    },
-    original_email: matchedEmail
-      ? {
-          subject: matchedEmail.meta?.subject || "",
-          from: matchedEmail.meta?.from || "",
-          snippet: matchedEmail.meta?.snippet || "",
-        }
-      : null,
-  };
+  ...draft,
+  status: manualOverride.status || draft.status,
+  booking: {
+    ...(draft.booking || {}),
+    customer_name: manualOverride.customer_name ?? draft.booking?.customer_name ?? null,
+    people: manualOverride.people ?? draft.booking?.people ?? null,
+    booking_date_iso: manualOverride.booking_date_iso ?? draft.booking?.booking_date_iso ?? null,
+    time: manualOverride.time ?? draft.booking?.time ?? null,
+    notes: manualOverride.notes ?? draft.booking?.notes ?? null,
+  },
+  original_email: matchedEmail
+    ? {
+        subject: matchedEmail.meta?.subject || "",
+        from: matchedEmail.meta?.from || "",
+        snippet: matchedEmail.meta?.snippet || "",
+      }
+    : null,
+};
 });
 
 window.allDrafts = draftsWithContext;
@@ -123,8 +128,7 @@ if (!activeDrafts.length) {
 }
 
   updateMiaStatus({
-  drafts: draftsWithContext,
-  actions: actions
+  drafts: draftsWithContext
 });
 }
 
@@ -251,16 +255,17 @@ ${bookingDetailsHtml}
 }
 
       ${
-        status === "draft"
-          ? `
-          <div class="request-actions" id="actions-${draft.id}">
-  <button class="edit-btn" onclick="editDraft('${draft.id}')">Edit</button>
-  ${copyButtonHtml}
-  <button class="approve-btn" onclick="approve('${draft.id}')">Send</button>
-</div>
-        `
-          : ""
-      }
+  status === "draft"
+    ? `
+    <div class="request-actions" id="actions-${draft.id}">
+      <button class="edit-btn" onclick="enableBookingEdit('${draft.id}')">Edit</button>
+      ${copyButtonHtml}
+      <button class="approve-btn" onclick="approve('${draft.id}')">Send</button>
+      <button class="edit-btn" onclick="markDraftDone('${draft.id}')">Done</button>
+    </div>
+  `
+    : ""
+}
     </div>
   `;
 }
@@ -528,14 +533,12 @@ function extractGuestCountFromText(text) {
 }
 
 
-function updateMiaStatus({ drafts = [], actions = [] } = {}) {
+function updateMiaStatus({ drafts = [] } = {}) {
   const statusEl = document.getElementById("mia-text");
   const dotEl = document.querySelector(".mia-dot");
   if (!statusEl) return;
 
-  const draftCount = drafts.filter((d) => (d.status || "draft") === "draft").length;
-  const sentCount = drafts.filter((d) => d.status === "sent").length;
-  const actionCount = actions.length;
+  const draftCount = drafts.filter((d) => (d.status || "draft") === "draft").length; 
 
   if (dotEl) {
     dotEl.classList.remove("is-live", "is-busy", "is-idle");
@@ -546,15 +549,7 @@ function updateMiaStatus({ drafts = [], actions = [] } = {}) {
     if (dotEl) dotEl.classList.add("is-busy");
     return;
   }
-
-
-
-  if (sentCount > 0) {
-    statusEl.innerText = `${sentCount} repl${sentCount === 1 ? "y" : "ies"} sent`;
-    if (dotEl) dotEl.classList.add("is-live");
-    return;
-  }
-
+ 
   statusEl.innerText = "Mia is online";
   if (dotEl) dotEl.classList.add("is-idle");
 }
@@ -880,6 +875,19 @@ function renderUpcomingItem(draft) {
 
 function printRunsheet(draftId) {
   alert(`Runsheet printing coming next for draft ${draftId}`);
+}
+
+function markDraftDone(draftId) {
+  window.manualBookingOverrides = window.manualBookingOverrides || {};
+
+  const existingOverride = window.manualBookingOverrides[draftId] || {};
+
+  window.manualBookingOverrides[draftId] = {
+    ...existingOverride,
+    status: "done"
+  };
+
+  loadRequests();
 }
 
 function logout() {
