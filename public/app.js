@@ -871,20 +871,25 @@ function renderUpcomingItem(draft) {
   const date = booking.booking_date_iso || null;
   const time = booking.time || "—";
   const notes = booking.notes || "";
+  const customerName = booking.customer_name || draft.to_email || "Guest";
 
   if (!date || !guests) return "";
-  
+
   const sourceText = `${draft.original_email?.snippet || ""} ${draft.body || ""}`.toLowerCase();
   const threshold = window.functionGuestThreshold || 10;
 
   const isFunction =
-    (booking.people && booking.people >= threshold) ||
+    (guests && guests >= threshold) ||
     sourceText.includes("set menu") ||
     sourceText.includes("function") ||
     sourceText.includes("birthday");
 
   const title = isFunction ? "Function Booking" : "Booking Reminder";
-  const reason = notes || (isFunction ? "Needs function follow-up" : "Needs attention");
+  const reason = notes.trim()
+    ? notes
+    : isFunction
+      ? "Needs function follow-up"
+      : "Needs attention";
 
   return `
     <div class="upcoming-card">
@@ -893,14 +898,16 @@ function renderUpcomingItem(draft) {
         <div class="upcoming-card-time">${date} ${time}</div>
       </div>
 
-      <div class="upcoming-card-meta">${guests} guests</div>
+      <div class="upcoming-card-meta">${customerName} • ${guests} guests</div>
       <div class="upcoming-card-note">${reason}</div>
 
       ${
         isFunction
-          ? `<div class="upcoming-card-actions">
-               <button class="approve-btn" onclick="printRunsheet('${draft.id}')">Print Runsheet</button>
-             </div>`
+          ? `
+            <div class="upcoming-card-actions">
+              <button class="approve-btn" onclick="printRunsheet('${draft.id}')">Print Runsheet</button>
+            </div>
+          `
           : ""
       }
     </div>
