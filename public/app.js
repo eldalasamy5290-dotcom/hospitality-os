@@ -82,6 +82,7 @@ const upcomingRelevantDrafts = draftsWithContext.filter((draft) => {
   const requestsContainer = document.getElementById("requests");
   const upcomingContainer = document.getElementById("upcoming");
   const actionsContainer = document.getElementById("actions");
+  const dashboardSecondary = document.getElementById("dashboard-secondary");
   const requestsTitle = document.getElementById("requests-title");
 
 if (requestsTitle) {
@@ -105,6 +106,10 @@ if (pageTitle) {
   currentPage === "inbox"
     ? activeDrafts
     : activeDrafts.slice(0, 1);
+
+    if (dashboardSecondary) {
+  dashboardSecondary.style.display = currentPage === "inbox" ? "none" : "grid";
+}
 
 if (!activeDrafts.length) {
   requestsContainer.innerHTML = "<p>No new requests.</p>";
@@ -551,7 +556,7 @@ function updateMiaStatus({ drafts = [] } = {}) {
   }
  
   statusEl.innerText = "Mia is online";
-  if (dotEl) dotEl.classList.add("is-idle");
+if (dotEl) dotEl.classList.add("is-live");
 }
 
 function setPage(page, el) {
