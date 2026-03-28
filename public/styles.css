@@ -394,14 +394,47 @@ button:active,
   box-shadow: none;
 }
 
-.guest-actions {
-  margin-top: 8px;
+
+
+.booking-edit-form {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #dbe3f0;
+  border-radius: 10px;
+  background: #f8fbff;
 }
 
-.guest-input {
-  width: 80px;
-  padding: 6px 8px;
-  border-radius: 8px;
+.edit-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.edit-row label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #243247;
+}
+
+.booking-edit-form input,
+.booking-edit-form textarea {
+  width: 100%;
+  padding: 10px 12px;
   border: 1px solid #d1d5db;
+  border-radius: 8px;
   font: inherit;
+  background: white;
+  color: #111827;
+  box-sizing: border-box;
+}
+
+.booking-edit-form textarea {
+  resize: vertical;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
 }

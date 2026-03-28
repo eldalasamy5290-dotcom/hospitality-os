@@ -115,18 +115,22 @@ const customerName = booking.customer_name || "—";
   const customer = draft.to_email || "Unknown guest";
   const status = draft.status || "draft";
 
+const bookingNotes = booking.notes || "—";
+
 const bookingDetailsHtml = `
   <div class="booking-extract">
     <div class="extract-title">${isFunction ? "Function Details" : "Booking Details"}</div>
     <div>Name: ${customerName}</div>
-    <div>
-  Guests: <span id="guest-count-${draft.id}">${guestCount}</span>
-</div>
-<div id="guest-actions-${draft.id}" class="guest-actions">
-  <button class="edit-btn" onclick="enableGuestEdit('${draft.id}')">Edit Guests</button>
-</div>
+    <div>Guests: ${guestCount}</div>
     <div>Date: ${bookingDate}</div>
     <div>Time: ${bookingTime}</div>
+    <div>Notes: ${bookingNotes}</div>
+
+    <div class="guest-actions">
+      <button class="edit-btn" onclick="enableBookingEdit('${draft.id}')">Edit</button>
+    </div>
+
+    <div id="booking-editor-${draft.id}"></div>
   </div>
 `;
 
@@ -505,42 +509,84 @@ function setPage(page, el) {
   loadRequests();
 }
 
-function enableGuestEdit(draftId) {
-  const valueEl = document.getElementById(`guest-count-${draftId}`);
-  const actionsEl = document.getElementById(`guest-actions-${draftId}`);
+function enableBookingEdit(draftId) {
+  const draft = (window.allDrafts || []).find((d) => d.id === draftId);
+  if (!draft) return;
 
-  if (!valueEl || !actionsEl) return;
+  const booking = draft.booking || {};
+  const sourceText = `${draft.original_email?.snippet || ""} ${draft.body || ""}`;
 
-  const currentValue = valueEl.innerText.trim() === "—" ? "" : valueEl.innerText.trim();
+  const currentName = booking.customer_name || "";
+  const currentGuests = booking.people ?? extractGuestCountFromText(sourceText) ?? "";
+  const currentDate = booking.booking_date_iso || extractDateFromText(sourceText) || "";
+  const currentTime = booking.time || extractTimeFromText(sourceText) || "";
+  const currentNotes = booking.notes || "";
 
-  valueEl.innerHTML = `
-    <input
-      id="guest-input-${draftId}"
-      type="number"
-      min="1"
-      value="${currentValue}"
-      class="guest-input"
-    />
-  `;
+  const editorEl = document.getElementById(`booking-editor-${draftId}`);
+  if (!editorEl) return;
 
-  actionsEl.innerHTML = `
-    <button class="edit-btn" onclick="saveGuestCount('${draftId}')">Save</button>
-    <button class="edit-btn" onclick="loadRequests()">Cancel</button>
+  editorEl.innerHTML = `
+    <div class="booking-edit-form">
+      <div class="edit-row">
+        <label>Name</label>
+        <input id="edit-name-${draftId}" type="text" value="${escapeHtml(currentName)}" />
+      </div>
+
+      <div class="edit-row">
+        <label>Guests</label>
+        <input id="edit-guests-${draftId}" type="number" min="1" value="${currentGuests}" />
+      </div>
+
+      <div class="edit-row">
+        <label>Date</label>
+        <input id="edit-date-${draftId}" type="text" value="${escapeHtml(currentDate)}" placeholder="YYYY-MM-DD" />
+      </div>
+
+      <div class="edit-row">
+        <label>Time</label>
+        <input id="edit-time-${draftId}" type="text" value="${escapeHtml(currentTime)}" placeholder="HH:MM" />
+      </div>
+
+      <div class="edit-row">
+        <label>Notes</label>
+        <textarea id="edit-notes-${draftId}" rows="3" placeholder="Add notes...">${escapeHtml(currentNotes)}</textarea>
+      </div>
+
+      <div class="edit-actions">
+        <button class="approve-btn" onclick="saveBookingEdit('${draftId}')">Save</button>
+        <button class="edit-btn" onclick="loadRequests()">Cancel</button>
+      </div>
+    </div>
   `;
 }
 
-function saveGuestCount(draftId) {
-  const inputEl = document.getElementById(`guest-input-${draftId}`);
-  if (!inputEl) return;
-
-  const newValue = inputEl.value.trim();
+function saveBookingEdit(draftId) {
   const draft = (window.allDrafts || []).find((d) => d.id === draftId);
   if (!draft) return;
 
   if (!draft.booking) draft.booking = {};
-  draft.booking.people = newValue ? Number(newValue) : null;
+
+  const nameEl = document.getElementById(`edit-name-${draftId}`);
+  const guestsEl = document.getElementById(`edit-guests-${draftId}`);
+  const dateEl = document.getElementById(`edit-date-${draftId}`);
+  const timeEl = document.getElementById(`edit-time-${draftId}`);
+  const notesEl = document.getElementById(`edit-notes-${draftId}`);
+
+  draft.booking.customer_name = nameEl ? nameEl.value.trim() || null : null;
+  draft.booking.people = guestsEl && guestsEl.value.trim() ? Number(guestsEl.value.trim()) : null;
+  draft.booking.booking_date_iso = dateEl ? dateEl.value.trim() || null : null;
+  draft.booking.time = timeEl ? timeEl.value.trim() || null : null;
+  draft.booking.notes = notesEl ? notesEl.value.trim() || null : null;
 
   loadRequests();
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function logout() {
