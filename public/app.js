@@ -660,6 +660,10 @@ function renderFunctionsPage() {
 
   const threshold = window.functionGuestThreshold || 10;
 
+  if (!window.functionMenusDraft) {
+    window.functionMenusDraft = JSON.parse(JSON.stringify(window.functionMenus || []));
+  }
+
   functionsPage.innerHTML = `
   <div class="page-header">
     <h1>Functions</h1>
@@ -679,31 +683,58 @@ function renderFunctionsPage() {
         onchange="updateFunctionThreshold()"
       />
     </div>
+
+    <p style="margin-top: 12px; color: #6b7280;">
+      Requests with guests equal to or above this number will be treated as function enquiries.
+    </p>
   </div>
 
   <div class="panel">
     <h2>Set Menus</h2>
 
-    ${window.functionMenus.map(menu => `
-      <div class="menu-edit-card">
-        <div class="edit-row">
-          <label>Name</label>
-          <input type="text" value="${menu.name}" onchange="updateMenu('${menu.id}', 'name', this.value)" />
-        </div>
+    ${
+      (window.functionMenusDraft || []).length
+        ? window.functionMenusDraft.map(menu => `
+          <div class="menu-edit-card">
+            <div class="edit-row">
+              <label>Name</label>
+              <input type="text" value="${escapeHtml(menu.name || "")}" onchange="updateMenuDraft('${menu.id}', 'name', this.value)" />
+            </div>
 
-        <div class="edit-row">
-          <label>Price per person ($)</label>
-          <input type="number" value="${menu.price}" onchange="updateMenu('${menu.id}', 'price', this.value)" />
-        </div>
+            <div class="edit-row">
+              <label>Price per person ($)</label>
+              <input type="number" value="${Number(menu.price || 0)}" onchange="updateMenuDraft('${menu.id}', 'price', this.value)" />
+            </div>
 
-        <div class="edit-row">
-          <label>Description</label>
-          <textarea onchange="updateMenu('${menu.id}', 'description', this.value)">${menu.description}</textarea>
-        </div>
-      </div>
-    `).join("")}
+            <div class="edit-row">
+              <label>Description</label>
+              <textarea onchange="updateMenuDraft('${menu.id}', 'description', this.value)">${escapeHtml(menu.description || "")}</textarea>
+            </div>
 
-    <button class="approve-btn" onclick="addNewMenu()">+ Add Menu</button>
+            <div class="edit-actions">
+              <button class="edit-btn" onclick="removeMenuDraft('${menu.id}')">Remove</button>
+            </div>
+          </div>
+        `).join("")
+        : `<p style="color:#6b7280;">No set menus configured yet.</p>`
+    }
+
+    <div class="edit-actions" style="margin-top: 16px;">
+      <button class="approve-btn" onclick="addNewMenuDraft()">+ Add Menu</button>
+      <button class="approve-btn" onclick="saveFunctionMenus()">Save Menus</button>
+      <button class="edit-btn" onclick="cancelFunctionMenus()">Cancel</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Menu Upload</h2>
+    <p style="color:#6b7280; margin-bottom:12px;">
+      Add PDF or image files of your menu for Mia to learn from.
+    </p>
+
+    <div class="menu-upload-placeholder">
+      <button class="approve-btn" onclick="alert('Upload coming next')">Add PDF or Image</button>
+    </div>
   </div>
 `;
 }
@@ -728,6 +759,48 @@ function addNewMenu() {
   };
 
   window.functionMenus.push(newMenu);
+  renderFunctionsPage();
+}
+
+function updateMenuDraft(menuId, field, value) {
+  const menu = (window.functionMenusDraft || []).find(m => m.id === menuId);
+  if (!menu) return;
+
+  if (field === "price") {
+    menu[field] = Number(value);
+  } else {
+    menu[field] = value;
+  }
+}
+
+function addNewMenuDraft() {
+  if (!window.functionMenusDraft) {
+    window.functionMenusDraft = [];
+  }
+
+  window.functionMenusDraft.push({
+    id: "menu_" + Date.now(),
+    name: "New Menu",
+    price: 60,
+    description: ""
+  });
+
+  renderFunctionsPage();
+}
+
+function removeMenuDraft(menuId) {
+  window.functionMenusDraft = (window.functionMenusDraft || []).filter(m => m.id !== menuId);
+  renderFunctionsPage();
+}
+
+function saveFunctionMenus() {
+  window.functionMenus = JSON.parse(JSON.stringify(window.functionMenusDraft || []));
+  renderFunctionsPage();
+  loadRequests();
+}
+
+function cancelFunctionMenus() {
+  window.functionMenusDraft = JSON.parse(JSON.stringify(window.functionMenus || []));
   renderFunctionsPage();
 }
 

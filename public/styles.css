@@ -446,3 +446,10 @@ button:active,
   margin-bottom: 14px;
   background: #fff;
 }
+
+.menu-upload-placeholder {
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 16px;
+  background: #f8fbff;
+}
