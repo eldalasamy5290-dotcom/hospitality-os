@@ -547,11 +547,7 @@ function updateMiaStatus({ drafts = [], actions = [] } = {}) {
     return;
   }
 
-  if (actionCount > 0) {
-    statusEl.innerText = `${actionCount} pending action${actionCount === 1 ? "" : "s"}`;
-    if (dotEl) dotEl.classList.add("is-busy");
-    return;
-  }
+
 
   if (sentCount > 0) {
     statusEl.innerText = `${sentCount} repl${sentCount === 1 ? "y" : "ies"} sent`;
