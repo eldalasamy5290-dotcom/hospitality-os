@@ -100,9 +100,17 @@ if (requestsTitle) {
 }
 
   const pageTitle = document.getElementById("page-title");
+const pageSubtitle = document.getElementById("page-subtitle");
 
 if (pageTitle) {
   pageTitle.innerText = currentPage === "inbox" ? "Inbox" : "Dashboard";
+}
+
+if (pageSubtitle) {
+  pageSubtitle.innerText =
+    currentPage === "inbox"
+      ? "Review and manage draft replies"
+      : "AI handling your bookings & functions";
 }
 
   const visibleDrafts =
