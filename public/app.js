@@ -1,5 +1,6 @@
 const restaurantId = localStorage.getItem("mia_restaurant_id");
 let currentPage = "dashboard";
+window.manualBookingOverrides = window.manualBookingOverrides || {};
 
 if (!restaurantId) {
   window.location.href = "/login.html";
@@ -28,21 +29,27 @@ async function loadRequests() {
   const inboxEvents = timelineItems.filter((item) => item.kind === "inbox_event");
 
   const draftsWithContext = drafts.map((draft) => {
-    const matchedEmail = inboxEvents.find(
-      (item) => item.meta?.thread_id && item.meta.thread_id === draft.thread_id
-    );
+  const matchedEmail = inboxEvents.find(
+    (item) => item.meta?.thread_id && item.meta.thread_id === draft.thread_id
+  );
 
-    return {
-      ...draft,
-      original_email: matchedEmail
-        ? {
-            subject: matchedEmail.meta?.subject || "",
-            from: matchedEmail.meta?.from || "",
-            snippet: matchedEmail.meta?.snippet || "",
-          }
-        : null,
-    };
-  });
+  const manualOverride = window.manualBookingOverrides?.[draft.id] || {};
+
+  return {
+    ...draft,
+    booking: {
+      ...(draft.booking || {}),
+      ...manualOverride,
+    },
+    original_email: matchedEmail
+      ? {
+          subject: matchedEmail.meta?.subject || "",
+          from: matchedEmail.meta?.from || "",
+          snippet: matchedEmail.meta?.snippet || "",
+        }
+      : null,
+  };
+});
 
 window.allDrafts = draftsWithContext;
 
@@ -562,9 +569,7 @@ function enableBookingEdit(draftId) {
 
 function saveBookingEdit(draftId) {
   const draft = (window.allDrafts || []).find((d) => d.id === draftId);
-  if (!draft) return;
-
-  if (!draft.booking) draft.booking = {};
+  if (!draft) return; 
 
   const nameEl = document.getElementById(`edit-name-${draftId}`);
   const guestsEl = document.getElementById(`edit-guests-${draftId}`);
@@ -572,11 +577,16 @@ function saveBookingEdit(draftId) {
   const timeEl = document.getElementById(`edit-time-${draftId}`);
   const notesEl = document.getElementById(`edit-notes-${draftId}`);
 
-  draft.booking.customer_name = nameEl ? nameEl.value.trim() || null : null;
-  draft.booking.people = guestsEl && guestsEl.value.trim() ? Number(guestsEl.value.trim()) : null;
-  draft.booking.booking_date_iso = dateEl ? dateEl.value.trim() || null : null;
-  draft.booking.time = timeEl ? timeEl.value.trim() || null : null;
-  draft.booking.notes = notesEl ? notesEl.value.trim() || null : null;
+  const existingOverride = window.manualBookingOverrides[draftId] || {};
+
+  window.manualBookingOverrides[draftId] = {
+    ...existingOverride,
+    customer_name: nameEl ? nameEl.value.trim() || null : null,
+    people: guestsEl && guestsEl.value.trim() ? Number(guestsEl.value.trim()) : null,
+    booking_date_iso: dateEl ? dateEl.value.trim() || null : null,
+    time: timeEl ? timeEl.value.trim() || null : null,
+    notes: notesEl ? notesEl.value.trim() || null : null,
+  };
 
   loadRequests();
 }
