@@ -503,18 +503,20 @@ function updateMiaStatus({ drafts = [], actions = [] } = {}) {
 
 function setPage(page, el) {
   currentPage = page;
-
-  // rimuove active da tutti i link
+ 
   document.querySelectorAll(".sidebar nav a").forEach((link) => {
     link.classList.remove("active");
   });
-
-  // aggiunge active al link cliccato
+ 
   if (el) {
     el.classList.add("active");
   }
 
-  // ricarica i dati
+  if (page === "functions") {
+    renderFunctionsPage();
+    return;
+  }
+
   loadRequests();
 }
 
@@ -610,7 +612,45 @@ function updateFunctionThreshold() {
 
   window.functionGuestThreshold = value;
 
+  if (currentPage === "functions") {
+    renderFunctionsPage();
+    return;
+  }
+
   loadRequests();
+}
+
+function renderFunctionsPage() {
+  const mainContent = document.getElementById("main-content");
+  if (!mainContent) return;
+
+  const threshold = window.functionGuestThreshold || 10;
+
+  mainContent.innerHTML = `
+    <div class="page-header">
+      <h1 id="page-title">Functions</h1>
+      <div class="subtitle">Manage function rules and set menu logic</div>
+    </div>
+
+    <div class="panel">
+      <h2>Function Settings</h2>
+
+      <div class="edit-row" style="max-width: 260px; margin-top: 16px;">
+        <label for="function-threshold-input">Function threshold</label>
+        <input
+          type="number"
+          id="function-threshold-input"
+          value="${threshold}"
+          min="1"
+          onchange="updateFunctionThreshold()"
+        />
+      </div>
+
+      <p style="margin-top: 12px; color: #6b7280;">
+        Requests with guests equal to or above this number will be treated as function enquiries.
+      </p>
+    </div>
+  `;
 }
 
 function logout() {
