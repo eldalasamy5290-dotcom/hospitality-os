@@ -86,15 +86,11 @@ const upcomingRelevantDrafts = draftsWithContext.filter((draft) => {
   const requestsTitle = document.getElementById("requests-title");
 
 if (requestsTitle) {
-  requestsTitle.innerText = `New Requests (${activeDrafts.length})`;
+  requestsTitle.innerText =
+    activeDrafts.length === 0
+      ? "New Requests"
+      : `New Requests (${activeDrafts.length})`;
 }
-
-const count = draftsWithContext.length;
-
-requestsTitle.innerText =
-  count === 0
-    ? "New Requests"
-    : `New Requests (${count})`;
 
   const pageTitle = document.getElementById("page-title");
 
@@ -123,10 +119,41 @@ if (!activeDrafts.length) {
     actionsContainer.innerHTML = actions.slice(0, 5).map(renderActionCard).join("");
   }
 
-  if (!upcomingRelevantDrafts.length) {
-  upcomingContainer.innerHTML = "<p>No upcoming reminders.</p>";
+  const now = new Date();
+const nextWeek = new Date();
+nextWeek.setDate(now.getDate() + 7);
+
+const upcomingReal = draftsWithContext.filter((draft) => {
+  const booking = draft.booking || {};
+  const date = booking.booking_date_iso;
+  const guests = booking.people;
+  const notes = booking.notes || "";
+
+  if (!date) return false;
+  if (!guests) return false;
+
+  const bookingDate = new Date(date);
+  if (isNaN(bookingDate)) return false;
+
+  if (bookingDate < now || bookingDate > nextWeek) return false;
+
+  const sourceText = `${draft.original_email?.snippet || ""} ${draft.body || ""}`.toLowerCase();
+
+  const isFunction =
+    (guests && guests >= threshold) ||
+    sourceText.includes("set menu") ||
+    sourceText.includes("function") ||
+    sourceText.includes("birthday");
+
+  const hasNotes = !!notes.trim();
+
+  return isFunction || hasNotes;
+});
+
+if (upcomingReal.length === 0) {
+  upcomingContainer.innerHTML = "<p>No upcoming events.</p>";
 } else {
-  upcomingContainer.innerHTML = upcomingRelevantDrafts
+  upcomingContainer.innerHTML = upcomingReal
     .slice(0, 5)
     .map(renderUpcomingItem)
     .join("");
@@ -840,11 +867,13 @@ function cancelFunctionMenus() {
 
 function renderUpcomingItem(draft) {
   const booking = draft.booking || {};
-  const guests = booking.people || "—";
-  const date = booking.booking_date_iso || "—";
+  const guests = booking.people || null;
+  const date = booking.booking_date_iso || null;
   const time = booking.time || "—";
   const notes = booking.notes || "";
 
+  if (!date || !guests) return "";
+  
   const sourceText = `${draft.original_email?.snippet || ""} ${draft.body || ""}`.toLowerCase();
   const threshold = window.functionGuestThreshold || 10;
 
