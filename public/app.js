@@ -86,10 +86,17 @@ const upcomingRelevantDrafts = draftsWithContext.filter((draft) => {
   const requestsTitle = document.getElementById("requests-title");
 
 if (requestsTitle) {
-  requestsTitle.innerText =
-    activeDrafts.length === 0
-      ? "New Requests"
-      : `New Requests (${activeDrafts.length})`;
+  if (currentPage === "inbox") {
+    requestsTitle.innerText =
+      activeDrafts.length === 0
+        ? "Draft Replies"
+        : `Draft Replies (${activeDrafts.length})`;
+  } else {
+    requestsTitle.innerText =
+      activeDrafts.length === 0
+        ? "New Requests"
+        : `New Requests (${activeDrafts.length})`;
+  }
 }
 
   const pageTitle = document.getElementById("page-title");
