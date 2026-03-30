@@ -115,6 +115,18 @@ function extractNameFromMessage(message: string): string | null {
   return null;
 }
 
+function computeBookingStatus(b: {
+  booking_date_iso?: string | null;
+  time?: string | null;
+  people?: number | null;
+}) {
+  if (!b.booking_date_iso || !b.time || !b.people) {
+    return "needs_info";
+  }
+
+  return "ready_to_create";
+}
+
 app.post("/ingest/email", async (req, res) => {
   console.log("=== INGEST EMAIL HIT ===");
   console.log("INGEST RAW BODY:", JSON.stringify(req.body, null, 2));
@@ -483,6 +495,12 @@ const knownName =
       },
     ];
 
+const bookingStatus = computeBookingStatus({
+  booking_date_iso: final_booking_date_iso,
+  time: final_time,
+  people: final_people,
+});
+
     const { data: updatedBooking, error: updateErr } = await supabase
       .from("bookings")
       .update({
@@ -492,7 +510,7 @@ const knownName =
   people: final_people,
   dietary: final_dietary,
   occasion: final_occasion,
-  status,
+  status: bookingStatus,
   confidence: extracted.confidence ?? existingBooking.confidence,
   history: mergedHistory,
   updated_at: new Date().toISOString(),
@@ -517,7 +535,7 @@ const knownName =
           people: final_people,
           dietary: final_dietary,
           occasion: final_occasion,
-          status,
+          status: bookingStatus,
           confidence: extracted.confidence,
           history: [
             {
@@ -1095,7 +1113,7 @@ app.get("/drafts", async (req, res) => {
     return res.status(400).json({ ok: false, error: "restaurant_id required" });
   }
 
-  
+
   const { data: drafts, error } = await supabase
     .from("draft_replies")
     .select("*")
