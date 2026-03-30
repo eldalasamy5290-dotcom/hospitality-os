@@ -222,6 +222,7 @@ const bookingTime = booking.time || extractTimeFromText(sourceText) || "—";
 const customerName =
   booking.customer_name ||
   draft.customer_name ||
+  extractNameFromDraftBody(body) ||
   extractNameFromMessage(sourceText) ||
   originalFrom ||
   "—";
@@ -991,6 +992,13 @@ function markDraftDone(draftId) {
   };
 
   loadRequests();
+}
+
+function extractNameFromDraftBody(body) {
+  if (!body) return null;
+
+  const match = body.match(/^(hi|hello)\s+([A-Za-z]+)[,\n]/i);
+  return match ? match[2] : null;
 }
 
 function logout() {
