@@ -179,6 +179,19 @@ if (upcomingReal.length === 0) {
 });
 }
 
+function extractNameFromMessage(text) {
+  if (!text) return null;
+
+  const match =
+    text.match(/my name is\s+([a-zA-Z]+)/i) ||
+    text.match(/i\s*'?m\s+([a-zA-Z]+)/i) ||
+    text.match(/this is\s+([a-zA-Z]+)/i) ||
+    text.match(/thanks[, ]+([a-zA-Z]+)/i) ||
+    text.match(/cheers[, ]+([a-zA-Z]+)/i);
+
+  return match ? match[1] : null;
+}
+
 function renderDraftCard(draft) {
   const body = draft.body || "";
   const lower = body.toLowerCase();
