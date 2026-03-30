@@ -189,13 +189,30 @@ function renderDraftCard(draft) {
   const originalSnippet = originalEmail?.snippet || "";
   const booking = draft.booking || {};
   const sourceText = `${draft.original_email?.snippet || ""} ${body}`;
+  
+  console.log("NAME DEBUG", {
+  bookingCustomerName: booking.customer_name,
+  draftCustomerName: draft.customer_name,
+  originalFrom,
+  sourceText,
+  chosenCustomerName:
+    booking.customer_name ||
+    draft.customer_name ||
+    extractNameFromMessage(sourceText) ||
+    originalFrom ||
+    "—",
+});
 
 const guestCount = booking.people ?? extractGuestCountFromText(sourceText) ?? "—";
 const bookingDate = booking.booking_date_iso || extractDateFromText(sourceText) || "—";
 const bookingTime = booking.time || extractTimeFromText(sourceText) || "—";
-const customerName = booking.customer_name || "—";
-    extractGuestCountFromText(body) ||
-    0;
+const customerName =
+  booking.customer_name ||
+  draft.customer_name ||
+  extractNameFromMessage(sourceText) ||
+  originalFrom ||
+  "—";
+   
 
   const availableMenus = window.functionMenus || [];
 const selectedMenu = availableMenus[0] || null;
@@ -428,6 +445,9 @@ function copyBooking(id) {
 
   const booking = draft.booking || {};
   const body = draft.body || "";
+  const originalEmail = draft.original_email || null;
+const originalFrom = originalEmail?.from || "";
+const sourceText = `${draft.original_email?.snippet || ""} ${body}`;
 
   const isFunction =
     body.toLowerCase().includes("function") ||
@@ -438,7 +458,12 @@ function copyBooking(id) {
   const guestCount = booking.people ?? extractGuestCountFromText(body) ?? "";
   const bookingDate = booking.booking_date_iso || extractDateFromText(body) || "";
   const bookingTime = booking.time || extractTimeFromText(body) || "";
-  const customerName = booking.customer_name || "";
+  const customerName =
+  booking.customer_name ||
+  draft.customer_name ||
+  extractNameFromMessage(sourceText) ||
+  originalFrom ||
+  "—";
 
   const text = isFunction
     ? `
@@ -882,15 +907,24 @@ function cancelFunctionMenus() {
 
 function renderUpcomingItem(draft) {
   const booking = draft.booking || {};
+  const body = draft.body || "";
+const originalEmail = draft.original_email || null;
+const originalFrom = originalEmail?.from || "";
+const sourceText = `${draft.original_email?.snippet || ""} ${body}`.toLowerCase();
   const guests = booking.people || null;
   const date = booking.booking_date_iso || null;
   const time = booking.time || "—";
   const notes = booking.notes || "";
-  const customerName = booking.customer_name || draft.to_email || "Guest";
+  const customerName =
+  booking.customer_name ||
+  draft.customer_name ||
+  extractNameFromMessage(sourceText) ||
+  originalFrom ||
+  "—";
 
   if (!date || !guests) return "";
 
-  const sourceText = `${draft.original_email?.snippet || ""} ${draft.body || ""}`.toLowerCase();
+
   const threshold = window.functionGuestThreshold || 10;
 
   const isFunction =
