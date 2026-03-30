@@ -521,7 +521,14 @@ const bookingStatus = computeBookingStatus({
 
     booking = updatedBooking;
     bookErr = updateErr;
+    
   } else {
+    const bookingStatus = computeBookingStatus({
+  booking_date_iso: final_booking_date_iso,
+  time: final_time,
+  people: final_people,
+});
+
     const { data: createdBooking, error: createErr } = await supabase
       .from("bookings")
       .insert([
