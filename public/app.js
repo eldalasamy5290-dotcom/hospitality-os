@@ -273,7 +273,8 @@ const bookingDetailsHtml = `
     <div>Notes: ${bookingNotes}</div>
 
     <div class="guest-actions">
-      <button class="edit-btn" onclick="enableBookingEdit('${draft.id}')">Edit</button>
+      <button class="edit-btn" onclick="enableBookingEdit('${draft.id}')">Edit Details</button>
+<button class="edit-btn" onclick="openNowBookIt('${draft.id}')">Create</button>
     </div>
 
     <div id="booking-editor-${draft.id}"></div>
@@ -336,11 +337,12 @@ ${bookingDetailsHtml}
   status === "draft"
     ? `
     <div class="request-actions" id="actions-${draft.id}">
-      <button class="edit-btn" onclick="enableBookingEdit('${draft.id}')">Edit</button>
-      ${copyButtonHtml}
-      <button class="approve-btn" onclick="approve('${draft.id}')">Send</button>
-      <button class="edit-btn" onclick="markDraftDone('${draft.id}')">Done</button>
-    </div>
+      <div class="request-actions" id="actions-${draft.id}">
+  <button class="edit-btn" onclick="enableReplyEdit('${draft.id}')">Edit Reply</button>
+  ${copyButtonHtml}
+  <button class="approve-btn" onclick="approve('${draft.id}')">Send</button>
+  <button class="edit-btn" onclick="markDraftDone('${draft.id}')">Done</button>
+</div>
   `
     : ""
 }
