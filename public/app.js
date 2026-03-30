@@ -337,8 +337,7 @@ ${bookingDetailsHtml}
   status === "draft"
     ? `
     <div class="request-actions" id="actions-${draft.id}">
-      <div class="request-actions" id="actions-${draft.id}">
-  <button class="edit-btn" onclick="enableReplyEdit('${draft.id}')">Edit Reply</button>
+  <button class="edit-btn" onclick="editDraft('${draft.id}')">Edit Reply</button>
   ${copyButtonHtml}
   <button class="approve-btn" onclick="approve('${draft.id}')">Send</button>
   <button class="edit-btn" onclick="markDraftDone('${draft.id}')">Done</button>
