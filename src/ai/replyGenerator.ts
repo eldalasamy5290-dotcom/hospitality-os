@@ -14,10 +14,12 @@ export type GenerateBookingReplyInput = {
   missing: string[];
   isFunctionLead: boolean;
   now_perth_iso: string;
+  previous_reply?: string | null;
+  was_human_edited?: boolean;
 };
 
 export async function generateBookingReply(input: GenerateBookingReplyInput) {
-    const { data: examples } = await supabase
+  const { data: examples } = await supabase
     .from("reply_learning_examples")
     .select("*")
     .eq("restaurant_id", input.restaurant_id)
@@ -33,7 +35,24 @@ Preferred reply: ${e.human_edited_reply || ""}
     )
     .join("\n");
 
-    const system = `
+  const humanEditContext =
+    input.was_human_edited && input.previous_reply
+      ? `
+IMPORTANT CONTEXT:
+The latest draft for this thread was manually edited by a human staff member.
+
+Use this previous edited reply as the strongest style reference for this thread:
+${input.previous_reply}
+
+Do not copy it blindly if the customer sent new information.
+Instead:
+- preserve its tone and style
+- update it naturally based on the latest booking details
+- keep it sounding like the same human/venue voice
+`
+      : "";
+
+  const system = `
 You are Mia, an experienced, friendly restaurant team member replying to customer emails.
 
 Your replies must feel natural, warm, and human — like a real person, not a system.
@@ -41,6 +60,8 @@ Your replies must feel natural, warm, and human — like a real person, not a sy
 Use the style and tone from these examples of preferred replies for this venue:
 
 ${examplesText || "No prior examples yet."}
+
+${humanEditContext}
 
 TONE:
 - Friendly and welcoming
@@ -57,7 +78,9 @@ CRITICAL RULES:
 - Never use placeholders such as [Your Name], [Restaurant Name], [Business Name], or similar
 - Do not add a signature with a person's name unless it is explicitly provided
 - If no business signature is provided, end naturally without a fake signature
-
+- If a previous human-edited reply exists for this thread, use it as the primary style reference
+- Do not repeat the old reply unchanged if new customer information has arrived
+- Update the reply naturally using the newest details while preserving the human-edited tone
 
 BOOKING LOGIC:
 - NEVER make the booking sound confirmed
