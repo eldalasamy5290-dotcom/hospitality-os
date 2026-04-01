@@ -22,6 +22,7 @@ if (!restaurantId) {
 }
 
 let isLoading = false; 
+let isEditingDraft = false;
 
 console.log("APP JS LOADED 🔥");
 
@@ -150,7 +151,7 @@ async function loadRequests() {
     }
 
     const visibleDrafts =
-      currentPage === "inbox" ? activeDrafts : activeDrafts.slice(0, 5);
+      currentPage === "inbox" ? activeDrafts : activeDrafts.slice(0, 1);
 
     if (dashboardSecondary) {
       dashboardSecondary.style.display =
@@ -160,7 +161,7 @@ async function loadRequests() {
     if (!activeDrafts.length) {
       if (inboxEvents.length) {
         requestsContainer.innerHTML = inboxEvents
-          .slice(0, currentPage === "inbox" ? 10 : 5)
+          .slice(0, currentPage === "inbox" ? 10 : 1)
           .map(renderInboxEventCard)
           .join("");
       } else {
@@ -472,7 +473,11 @@ async function teachMiaDraft(draftId) {
       return;
     }
 
-    const human_edited_reply = textarea.value;
+    const human_edited_reply = textarea.value.trim();
+    if (!human_edited_reply) {
+      alert("Reply cannot be empty");
+      return;
+    }
 
     const draft = window.allDrafts?.find((d) => d.id === draftId);
     if (!draft) {
@@ -480,8 +485,30 @@ async function teachMiaDraft(draftId) {
       return;
     }
 
+    // 1) save edited draft to backend
+    const saveRes = await fetch(`/drafts/${draftId}/update`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        body: human_edited_reply,
+      }),
+    });
+
+    const saveJson = await saveRes.json();
+
+    if (!saveRes.ok || !saveJson.ok) {
+      console.error(saveJson);
+      alert("Saving draft failed");
+      return;
+    }
+
+    // 2) optionally save learning example
     const customer_message =
-      draft.original_email?.snippet || draft.customer_message || "";
+      draft.original_email?.snippet ||
+      draft.customer_message ||
+      "";
 
     const category =
       draft.body?.toLowerCase().includes("function") ||
@@ -490,7 +517,7 @@ async function teachMiaDraft(draftId) {
         ? "function"
         : "booking";
 
-    const res = await fetch("/learn", {
+    const learnRes = await fetch("/learn", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -504,16 +531,19 @@ async function teachMiaDraft(draftId) {
       }),
     });
 
-    const json = await res.json();
+    const learnJson = await learnRes.json();
 
-    if (!res.ok || !json.ok) {
-      console.error(json);
-      alert("Teach Mia failed");
-      return;
+    if (!learnRes.ok || !learnJson.ok) {
+      console.error(learnJson);
+      alert("Draft saved, but Teach Mia failed");
     }
 
-    draft.body = human_edited_reply; 
- 
+    // 3) update local state
+    draft.body = human_edited_reply;
+    draft.was_human_edited = true;
+    isEditingDraft = false;
+
+    // 4) update UI
     const bodyDiv = document.getElementById(`body-${draftId}`);
     if (bodyDiv) {
       bodyDiv.innerHTML = escapeHtml(human_edited_reply).replace(/\n/g, "<br/>");
@@ -522,17 +552,17 @@ async function teachMiaDraft(draftId) {
     const actionsDiv = document.getElementById(`actions-${draftId}`);
     if (actionsDiv) {
       actionsDiv.innerHTML = `
-        <button class="edit-btn" onclick="editDraft('${draftId}')">Edit</button>
+        <button class="edit-btn" onclick="editDraft('${draftId}')">Edit Reply</button>
         <button class="approve-btn" onclick="approve('${draftId}')">Approve & Send</button>
       `;
     }
 
-    alert("Mia learned from your edit ✅");
+    alert("Draft saved and Mia learned ✅");
   } catch (err) {
     console.error(err);
-    alert("Teach Mia failed");
+    alert("Save & Teach failed");
   }
-} 
+}
 
 function copyBooking(id) {
   const draft = window.allDrafts?.find((d) => d.id === id);
@@ -669,6 +699,8 @@ function editDraft(id) {
   const draft = window.allDrafts?.find((d) => d.id === id);
   if (!draft) return;
 
+  isEditingDraft = true;
+
   const bodyDiv = document.getElementById(`body-${id}`);
   if (!bodyDiv) return; 
 
@@ -680,9 +712,10 @@ function editDraft(id) {
   if (!actionsDiv) return;
 
   actionsDiv.innerHTML = `
-    <button class="edit-btn" onclick="teachMiaDraft('${id}')">Save & Teach</button>
-    <button class="approve-btn" onclick="approve('${id}')">Approve & Send</button>
-  `;
+  <button class="edit-btn" onclick="teachMiaDraft('${id}')">Save & Teach</button>
+  <button class="approve-btn" onclick="approve('${id}')">Approve & Send</button>
+  <button class="edit-btn" onclick="cancelDraftEdit()">Cancel</button>
+`;
 } 
 
 function updateMiaStatus({ drafts = [] } = {}) {
@@ -1075,7 +1108,14 @@ function openNowBookIt(draftId) {
 
 loadRequests();
 
+function cancelDraftEdit() {
+  isEditingDraft = false;
+  loadRequests();
+}
+
 setInterval(() => {
+  if (isEditingDraft) return;
+
   if (currentPage === "dashboard" || currentPage === "inbox") {
     loadRequests();
   }
