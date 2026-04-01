@@ -373,8 +373,20 @@ if (result.type !== "booking" && !existingBookingByThread) {
   });
 }
 
-const extracted = result.booking!;
+type PartialBookingExtract = {
+  booking_date_iso?: string | null;
+  time?: string | null;
+  people?: number | null;
+  dietary?: string | null;
+  occasion?: string | null;
+  confidence?: number | null;
+  intent?: string | null;
+};
+
 const emailEvent = (p as any).email_event ?? null;
+const extracted: PartialBookingExtract = result.booking ?? {};
+console.log("SAFE EXTRACTED BOOKING:", JSON.stringify(extracted, null, 2));
+
 const extractedNameFromMessage = extractNameFromMessage(
   p.message_text || ""
 );
@@ -453,23 +465,21 @@ const knownName =
   // 3) backend rules for status
   let final_booking_date_iso = existingBooking?.booking_date_iso ?? null;
 
-  if (extracted.booking_date_iso) {
-  // aggiorna solo se non esiste già una data
-  if (!existingBooking?.booking_date_iso) {
-    final_booking_date_iso = extracted.booking_date_iso;
-  }
+if (extracted.booking_date_iso && !existingBooking?.booking_date_iso) {
+  final_booking_date_iso = extracted.booking_date_iso;
 }
-  const final_time =
-    extracted.time ?? existingBooking?.time ?? null;
 
-  const final_people =
-    extracted.people ?? existingBooking?.people ?? null;
+const final_time =
+  extracted.time ?? existingBooking?.time ?? null;
 
-  const final_dietary =
-    extracted.dietary ?? existingBooking?.dietary ?? null;
+const final_people =
+  extracted.people ?? existingBooking?.people ?? null;
 
-  const final_occasion =
-    extracted.occasion ?? existingBooking?.occasion ?? null;
+const final_dietary =
+  extracted.dietary ?? existingBooking?.dietary ?? null;
+
+const final_occasion =
+  extracted.occasion ?? existingBooking?.occasion ?? null;
 
   const missing: string[] = [];
   if (!final_booking_date_iso) missing.push("date");
@@ -489,7 +499,7 @@ const knownName =
       {
         ts: new Date().toISOString(),
         event: "ingest_email_update",
-        intent: extracted.intent,
+        intent: extracted.intent ?? null,
         missing,
         message_preview: p.message_text.slice(0, 120),
       },
@@ -543,12 +553,12 @@ const bookingStatus = computeBookingStatus({
           dietary: final_dietary,
           occasion: final_occasion,
           status: bookingStatus,
-          confidence: extracted.confidence,
+          confidence: extracted.confidence ?? 0,
           history: [
             {
               ts: new Date().toISOString(),
               event: "ingest_email",
-              intent: extracted.intent,
+              intent: extracted.intent ?? null,
               missing,
               message_preview: p.message_text.slice(0, 120),
             },
@@ -587,6 +597,8 @@ const replyBody = await generateBookingReply({
   missing: missingFields,
   isFunctionLead,
   now_perth_iso,
+  previous_reply: existingDraft?.body ?? null,
+  was_human_edited: existingDraft?.was_human_edited ?? false,
 });
 
 // RULE:
@@ -1208,6 +1220,22 @@ app.post("/drafts/:id/update", async (req, res) => {
     return res.status(400).json({ ok: false, error: "body required" });
   }
 
+  // 1) load current draft before editing
+  const { data: existingDraft, error: readErr } = await supabase
+    .from("draft_replies")
+    .select("*")
+    .eq("id", id)
+    .eq("status", "draft")
+    .single();
+
+  if (readErr || !existingDraft) {
+    return res.status(500).json({
+      ok: false,
+      error: readErr?.message || "Draft not found",
+    });
+  }
+
+  // 2) update the draft with human edit
   const { data, error } = await supabase
     .from("draft_replies")
     .update({
@@ -1224,8 +1252,37 @@ app.post("/drafts/:id/update", async (req, res) => {
     return res.status(500).json({ ok: false, error: error.message });
   }
 
+  // 3) save learning example
+  const learningPayload = {
+    restaurant_id: existingDraft.restaurant_id,
+    category: "booking",
+    customer_message: null,
+    ai_draft: existingDraft.body ?? null,
+    human_edited_reply: body,
+    learning_notes: null,
+  };
+
+  const { error: learningErr } = await supabase
+    .from("reply_learning_examples")
+    .insert([learningPayload]);
+
+  if (learningErr) {
+    console.error("LEARNING INSERT FAILED:", learningErr.message);
+  }
+
+  if (!learningErr) {
+  console.log("LEARNING EXAMPLE SAVED", {
+    draft_id: id,
+    restaurant_id: existingDraft.restaurant_id,
+  });
+}
+
   return res.json({ ok: true, draft: data });
 });
+
+
+
+
 
 
 
