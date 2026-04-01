@@ -85,24 +85,7 @@ async function saveState(state) {
     throw new Error(`saveState failed: ${error.message}`);
   }
 }
-
-function looksLikeBooking(msg) {
-  const text = `${msg.subject || ""}\n${msg.bodyPreview || ""}`.toLowerCase();
-
-  const keywords = [
-    "book",
-    "booking",
-    "reserve",
-    "reservation",
-    "table",
-    "pax",
-    "people",
-    "tonight",
-    "tomorrow",
-  ];
-
-  return keywords.some((k) => text.includes(k));
-}
+ 
 
 function stripHtml(html) {
   return String(html || "")
@@ -372,4 +355,17 @@ main()
   );
 
   return r.data;
+}
+
+async function fetchAttachments(messageId, accessToken) {
+  const r = await axios.get(
+    `https://graph.microsoft.com/v1.0/me/messages/${messageId}/attachments?$select=id,name,contentType,size`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  return r.data.value || [];
 }
