@@ -73,13 +73,13 @@ app.post("/webhooks/outlook", (req, res) => {
 });
 
 // Trigger async: run delta sync + ingest
-if (process.env.RUN_POLL_ON_BOOT === "false") {
- spawn("node", ["src/runOutlookPoll.js"], {
-  cwd: process.cwd(),
-  env: process.env,
-  stdio: "ignore",
-  detached: true,
-}).unref();
+if (process.env.RUN_POLL_ON_BOOT === "true") {
+  spawn("node", ["src/runOutlookPoll.js"], {
+    cwd: process.cwd(),
+    env: process.env,
+    stdio: "ignore",
+    detached: true,
+  }).unref();
 }
 
 const IngestEmailSchema = z.object({
@@ -142,25 +142,25 @@ app.post("/ingest/email", async (req, res) => {
     const incomingMessageId = p.email_event?.message_id ?? null;
 
 if (incomingMessageId) {
-  const { data: existingInboxEvents, error: existingInboxEventErr } = await supabase
-    .from("inbox_events")
-    .select("id")
-    .eq("restaurant_id", p.restaurant_id)
-    .eq("message_id", incomingMessageId)
-    .limit(1);
+  const { data: existingInboxEvent, error: existingInboxEventErr } = await supabase
+  .from("inbox_events")
+  .select("id")
+  .eq("restaurant_id", p.restaurant_id)
+  .eq("message_id", incomingMessageId)
+  .maybeSingle();
 
   if (existingInboxEventErr) {
-    return res.status(500).json({ ok: false, error: existingInboxEventErr.message });
-  }
+  return res.status(500).json({ ok: false, error: existingInboxEventErr.message });
+}
 
-  if (existingInboxEvents && existingInboxEvents.length > 0) {
-    console.log("⛔ SKIP duplicate message_id:", incomingMessageId);
-    return res.json({
-      ok: true,
-      skipped: true,
-      reason: "message_already_processed",
-    });
-  }
+if (existingInboxEvent) {
+  console.log("⛔ SKIP duplicate message_id:", incomingMessageId);
+  return res.json({
+    ok: true,
+    skipped: true,
+    reason: "message_already_processed",
+  });
+}
 }
 
   try {
@@ -376,7 +376,7 @@ if (result.type !== "booking" && !existingBookingByThread) {
 const extracted = result.booking!;
 const emailEvent = (p as any).email_event ?? null;
 const extractedNameFromMessage = extractNameFromMessage(
-  (p.message_text || "").toLowerCase()
+  p.message_text || ""
 );
 
 const { error: bookingInboxErr } = await supabase
@@ -476,7 +476,7 @@ const knownName =
   if (!final_time) missing.push("time");
   if (!final_people) missing.push("people");
     
-  const status = missing.length > 0 ? "needs_info" : "pending";  
+
 
  // 4) create booking
 
@@ -521,7 +521,7 @@ const bookingStatus = computeBookingStatus({
 
     booking = updatedBooking;
     bookErr = updateErr;
-    
+
   } else {
     const bookingStatus = computeBookingStatus({
   booking_date_iso: final_booking_date_iso,
@@ -632,17 +632,24 @@ if (!existingDraft && threadIdForDraft) {
 }
 
 if (existingDraft) {
+  const shouldOverwriteBody = !existingDraft.was_human_edited;
+
+  const updatePayload: any = {
+    booking_id: booking.id,
+    to_email: p.customer_email,
+    subject: "Re: booking request",
+    thread_id: threadIdForDraft ?? existingDraft.thread_id ?? null,
+    message_id: messageIdForDraft ?? existingDraft.message_id ?? null,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (shouldOverwriteBody) {
+    updatePayload.body = replyBody;
+  }
+
   const { error: updateDraftErr } = await supabase
     .from("draft_replies")
-    .update({
-      booking_id: booking.id,
-      to_email: p.customer_email,
-      subject: "Re: booking request",
-      body: replyBody,
-      thread_id: threadIdForDraft ?? existingDraft.thread_id ?? null,
-      message_id: messageIdForDraft ?? existingDraft.message_id ?? null,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updatePayload)
     .eq("id", existingDraft.id);
 
   if (updateDraftErr) {
@@ -662,6 +669,7 @@ if (existingDraft) {
           subject: "Re: booking request",
           body: replyBody,
           status: "draft",
+          was_human_edited: false,
         },
       ],
       {
@@ -1194,7 +1202,7 @@ app.get("/actions", async (req, res) => {
 
 app.post("/drafts/:id/update", async (req, res) => {
   const id = req.params.id;
-  const body = String(req.body?.body ?? "");
+  const body = String(req.body?.body ?? "").trim();
 
   if (!body) {
     return res.status(400).json({ ok: false, error: "body required" });
@@ -1204,9 +1212,11 @@ app.post("/drafts/:id/update", async (req, res) => {
     .from("draft_replies")
     .update({
       body,
+      was_human_edited: true,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
+    .eq("status", "draft")
     .select("*")
     .single();
 
@@ -1216,6 +1226,8 @@ app.post("/drafts/:id/update", async (req, res) => {
 
   return res.json({ ok: true, draft: data });
 });
+
+
 
 // approve draft reply
 app.post("/drafts/:id/approve", async (req, res) => {
