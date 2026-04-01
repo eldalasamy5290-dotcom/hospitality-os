@@ -329,20 +329,7 @@ console.log("CURRENT DELTA LINK EXISTS:", !!state.deltaLink);
   releaseRunnerLock();
 }
 
-main()
-  .then(() => {
-    console.log("---- RUN END ----");
-    process.exit(0);
-  })
-  .catch((e) => {
-    releaseRunnerLock();
-    console.error("RUN ERROR MESSAGE:", e?.message || String(e));
-    console.error(
-      "RUN ERROR DATA:",
-      JSON.stringify(e?.response?.data || null, null, 2)
-    );
-    process.exit(1);
-  });
+
 
   async function fetchFullMessage(messageId, accessToken) {
   const r = await axios.get(
@@ -369,3 +356,24 @@ async function fetchAttachments(messageId, accessToken) {
 
   return r.data.value || [];
 }
+
+async function runLoop() {
+  while (true) {
+    try {
+      console.log("---- RUN START ----");
+      await main();
+      console.log("---- RUN END ----");
+    } catch (e) {
+      releaseRunnerLock();
+      console.error("LOOP ERROR MESSAGE:", e?.message || String(e));
+      console.error(
+        "LOOP ERROR DATA:",
+        JSON.stringify(e?.response?.data || null, null, 2)
+      );
+    }
+
+    await new Promise((r) => setTimeout(r, 10000));
+  }
+}
+
+runLoop();

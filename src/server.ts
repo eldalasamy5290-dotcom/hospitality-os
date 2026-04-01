@@ -7,8 +7,7 @@ import { z } from "zod";
 
 import { supabase } from "./lib/supabase";
 import { processIncomingEmail } from "./ai/emailProcessor";
-import { extractBookingFromText } from "./ai/bookingExtract";
-import { spawn } from "child_process";
+import { extractBookingFromText } from "./ai/bookingExtract"; 
 import fs from "fs";
 import path from "path";
 import { functionKnowledgeDemo } from "./ai/functionKnowledge";
@@ -39,48 +38,14 @@ app.get("/webhooks/outlook", (req, res) => {
 
 app.post("/webhooks/outlook", (req, res) => {
   const token = (req.query as any)?.validationToken as string | undefined;
-  if (token) return res.status(200).send(token); // validation
-
-  // ACK fast
-  res.sendStatus(202);
+  if (token) return res.status(200).send(token);
 
   console.log("Outlook webhook notification received");
-
-  // Debounce: avoid spawning many runners in a burst
-  try {
-    const lockPath = path.join(process.cwd(), "data", "outlook_trigger.lock");
-    const now = Date.now();
-
-    let last = 0;
-    if (fs.existsSync(lockPath)) {
-      last = Number(fs.readFileSync(lockPath, "utf-8") || "0");
-    }
-
-    // if last trigger was within 15s, skip
-    if (now - last < 15000) return;
-
-    fs.writeFileSync(lockPath, String(now));
-
-    spawn("node", ["src/runOutlookPoll.js"], {
-      cwd: process.cwd(),
-      env: process.env,
-      stdio: "ignore",
-      detached: true,
-    }).unref();
-  } catch (e) {
-    console.error("Failed to trigger delta runner:", e);
-  }
+  return res.sendStatus(202);
 });
 
 // Trigger async: run delta sync + ingest
-if (process.env.RUN_POLL_ON_BOOT === "true") {
-  spawn("node", ["src/runOutlookPoll.js"], {
-    cwd: process.cwd(),
-    env: process.env,
-    stdio: "ignore",
-    detached: true,
-  }).unref();
-}
+
 
 const IngestEmailSchema = z.object({
   restaurant_id: z.string().uuid(),
@@ -585,21 +550,7 @@ if (!knownName) {
 }
 
 const isFunctionLead = Boolean(final_people && final_people >= 15);
-
-const replyBody = await generateBookingReply({
-  restaurant_id: p.restaurant_id,
-  customer_name: knownName,
-  people: final_people,
-  booking_date_iso: final_booking_date_iso,
-  time: final_time,
-  dietary: final_dietary,
-  occasion: final_occasion,
-  missing: missingFields,
-  isFunctionLead,
-  now_perth_iso,
-  previous_reply: existingDraft?.body ?? null,
-  was_human_edited: existingDraft?.was_human_edited ?? false,
-});
+ 
 
 // RULE:
 // Use booking_id as primary key for draft lookup.
@@ -642,6 +593,21 @@ if (!existingDraft && threadIdForDraft) {
 
   existingDraft = draftRows?.[0] ?? null;
 }
+
+const replyBody = await generateBookingReply({
+  restaurant_id: p.restaurant_id,
+  customer_name: knownName,
+  people: final_people,
+  booking_date_iso: final_booking_date_iso,
+  time: final_time,
+  dietary: final_dietary,
+  occasion: final_occasion,
+  missing: missingFields,
+  isFunctionLead,
+  now_perth_iso,
+  previous_reply: existingDraft?.body ?? null,
+  was_human_edited: existingDraft?.was_human_edited ?? false,
+});
 
 if (existingDraft) {
   const shouldOverwriteBody = !existingDraft.was_human_edited;

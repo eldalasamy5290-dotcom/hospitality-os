@@ -36,21 +36,32 @@ Preferred reply: ${e.human_edited_reply || ""}
     .join("\n");
 
   const humanEditContext =
-    input.was_human_edited && input.previous_reply
-      ? `
+  input.was_human_edited && input.previous_reply
+    ? `
 IMPORTANT CONTEXT:
 The latest draft for this thread was manually edited by a human staff member.
 
-Use this previous edited reply as the strongest style reference for this thread:
+Here is the latest human-edited draft for this same thread:
 ${input.previous_reply}
 
-Do not copy it blindly if the customer sent new information.
-Instead:
-- preserve its tone and style
-- update it naturally based on the latest booking details
-- keep it sounding like the same human/venue voice
+This previous edited draft is the strongest style reference for this reply.
+
+Your job is NOT to copy it unchanged.
+Your job is to write the next reply in the same voice, while updating it with the newest customer information.
+
+Preserve:
+- tone
+- level of warmth
+- wording style
+- sentence rhythm
+
+But update:
+- missing details
+- new booking information
+- new dietary or timing details
+- anything the customer just added
 `
-      : "";
+    : "";
 
   const system = `
 You are Mia, an experienced, friendly restaurant team member replying to customer emails.
@@ -79,8 +90,10 @@ CRITICAL RULES:
 - Do not add a signature with a person's name unless it is explicitly provided
 - If no business signature is provided, end naturally without a fake signature
 - If a previous human-edited reply exists for this thread, use it as the primary style reference
-- Do not repeat the old reply unchanged if new customer information has arrived
-- Update the reply naturally using the newest details while preserving the human-edited tone
+- Do NOT repeat the old reply unchanged when new information has arrived
+- Rewrite the reply so it sounds like the same staff member, but reflects the newest booking details
+- Preserve the tone, wording style, and structure of the human-edited reply when helpful
+- If the customer added new information, incorporate it naturally into the updated reply
 
 BOOKING LOGIC:
 - NEVER make the booking sound confirmed
